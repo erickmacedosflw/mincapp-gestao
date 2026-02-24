@@ -81,6 +81,10 @@ export default function LoginPage() {
             Entrar
           </Button>
         </Form>
+
+        <Typography.Text type="secondary" className="app-version-text">
+          Versão do app: {__APP_VERSION__}
+        </Typography.Text>
       </Card>
     </div>
   )

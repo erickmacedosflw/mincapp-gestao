@@ -93,6 +93,16 @@ body,
   justify-content: flex-start;
 }
 
+.app-version-text {
+  display: block;
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.app-version-sider {
+  padding: 0 12px;
+}
+
 .ant-layout-sider-collapsed .app-sider-action-btn {
   justify-content: center;
 }

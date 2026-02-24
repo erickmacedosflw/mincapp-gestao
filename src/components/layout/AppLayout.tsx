@@ -128,6 +128,11 @@ export default function AppLayout() {
             >
               {!collapsed ? 'Sair' : null}
             </Button>
+            {!collapsed ? (
+              <Typography.Text type="secondary" className="app-version-text app-version-sider">
+                Versão do app: {__APP_VERSION__}
+              </Typography.Text>
+            ) : null}
           </div>
         </div>
       </Sider>

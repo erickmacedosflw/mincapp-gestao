@@ -5,7 +5,10 @@ import LoginPage from '../pages/auth/LoginPage'
 import ClassesPage from '../pages/classes/ClassesPage'
 import ClassManagementPage from '../pages/classes/ClassManagementPage'
 import ClassJustificationsPage from '../pages/classes/ClassJustificationsPage'
+import ClassCreatePage from '../pages/classes/ClassCreatePage'
 import SubjectsPage from '../pages/subjects/SubjectsPage'
+import SubjectCreatePage from '../pages/subjects/SubjectCreatePage'
+import SubjectEditPage from '../pages/subjects/SubjectEditPage'
 import StudentsPage from '../pages/students/StudentsPage'
 import InspireStudentsPage from '../pages/students/InspireStudentsPage'
 import StudentAcademicLifePage from '../pages/students/StudentAcademicLifePage'
@@ -37,6 +40,10 @@ export const appRouter = createBrowserRouter([
         element: <ClassesPage />,
       },
       {
+        path: 'class/new',
+        element: <ClassCreatePage />,
+      },
+      {
         path: 'dashboard',
         element: <DashboardPage />,
       },
@@ -51,6 +58,14 @@ export const appRouter = createBrowserRouter([
       {
         path: 'class/:classId/subjects',
         element: <SubjectsPage />,
+      },
+      {
+        path: 'class/:classId/subjects/new',
+        element: <SubjectCreatePage />,
+      },
+      {
+        path: 'class/:classId/subjects/:subjectId/edit',
+        element: <SubjectEditPage />,
       },
       {
         path: 'class/:classId/students',

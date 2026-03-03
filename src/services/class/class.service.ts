@@ -1,6 +1,19 @@
 import { apiClient } from '../api/client'
 import type { ClassItem } from '../../types/class'
 
+const CLASS_CAMPUS_ID = import.meta.env.VITE_CLASS_CAMPUS_ID?.trim()
+
+if (!CLASS_CAMPUS_ID) {
+  throw new Error('VITE_CLASS_CAMPUS_ID não foi configurada no ambiente.')
+}
+
+type CreateClassParams = {
+  name: string
+  initDate: string
+  finishDate: string
+  subscriptionEndDate: string
+}
+
 export async function getClasses() {
   const response = await apiClient.get<ClassItem[]>('/class')
   return response.data
@@ -33,4 +46,13 @@ export async function addStudentToClass({ classId, studentId }: AddStudentToClas
   await apiClient.post(`/class/student/add/${classId}`, {
     studentIds: [studentId],
   })
+}
+
+export async function createClass(payload: CreateClassParams) {
+  const response = await apiClient.post<ClassItem>('/class', {
+    ...payload,
+    campusId: CLASS_CAMPUS_ID,
+  })
+
+  return response.data
 }

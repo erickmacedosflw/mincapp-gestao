@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Col, Empty, Radio, Row, Select, Space, Spin, Typography } from 'antd'
-import { ReadOutlined } from '@ant-design/icons'
+import { Alert, Button, Col, Empty, Radio, Row, Select, Space, Spin, Typography } from 'antd'
+import { PlusOutlined, ReadOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import type { ClassItem } from '../../types/class'
 import { getClasses } from '../../services/class/class.service'
@@ -87,13 +87,18 @@ export default function ClassesPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Space direction="vertical" size={4}>
-        <Space size={8} align="center">
-          <ReadOutlined style={{ fontSize: 22 }} />
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            Turmas
-          </Typography.Title>
-        </Space>
+      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <Space size={8} align="center">
+            <ReadOutlined style={{ fontSize: 22 }} />
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              Turmas
+            </Typography.Title>
+          </Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/class/new')}>
+            Nova turma
+          </Button>
+        </div>
         <Typography.Text type="secondary">
           Lista de turmas com período e status.
         </Typography.Text>

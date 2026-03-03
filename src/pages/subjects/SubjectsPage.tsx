@@ -3,11 +3,29 @@ import {
   BookOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
+  EditOutlined,
   FilterOutlined,
+  PlusOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Alert, Breadcrumb, Card, Col, Empty, Grid, List, Radio, Row, Skeleton, Space, Table, Tag, Typography } from 'antd'
-import { Link, useParams } from 'react-router-dom'
+import {
+  Alert,
+  Breadcrumb,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Grid,
+  List,
+  Radio,
+  Row,
+  Skeleton,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { SubjectItem } from '../../types/subject'
 import type { ClassItem } from '../../types/class'
 import { getSubjectsByClassId } from '../../services/subject/subject.service'
@@ -18,6 +36,7 @@ type SubjectFilter = 'all' | 'ongoing' | 'closed' | 'not_started'
 
 export default function SubjectsPage() {
   const { classId } = useParams()
+  const navigate = useNavigate()
   const screens = Grid.useBreakpoint()
 
   const [subjects, setSubjects] = useState<SubjectItem[]>([])
@@ -133,6 +152,16 @@ export default function SubjectsPage() {
         )
       },
     },
+    {
+      title: 'Ações',
+      key: 'actions',
+      width: 120,
+      render: (_: unknown, item: SubjectItem) => (
+        <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}>
+          Editar
+        </Button>
+      ),
+    },
   ]
 
   if (loading) {
@@ -201,12 +230,17 @@ export default function SubjectsPage() {
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
             <Card>
               <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                <Space size={8} align="center">
-                  <BookOutlined style={{ fontSize: 22 }} />
-                  <Typography.Title level={4} style={{ margin: 0 }}>
-                    Matérias da turma {selectedClass.name}
-                  </Typography.Title>
-                </Space>
+                <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                  <Space size={8} align="center">
+                    <BookOutlined style={{ fontSize: 22 }} />
+                    <Typography.Title level={4} style={{ margin: 0 }}>
+                      Matérias da turma {selectedClass.name}
+                    </Typography.Title>
+                  </Space>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`/class/${selectedClass.id}/subjects/new`)}>
+                    Nova matéria
+                  </Button>
+                </div>
 
                 <Space size={8} align="center" wrap>
                   <FilterOutlined />
@@ -239,7 +273,18 @@ export default function SubjectsPage() {
                       const remainingDays = getRemainingDaysInPeriod(item.initDate, item.finishDate)
 
                       return (
-                        <List.Item>
+                        <List.Item
+                          actions={[
+                            <Button
+                              key={`edit-${item.id}`}
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}
+                            >
+                              Editar
+                            </Button>,
+                          ]}
+                        >
                           <List.Item.Meta
                             title={
                               <Space size={8} wrap>

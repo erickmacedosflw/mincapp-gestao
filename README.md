@@ -16,7 +16,7 @@ Frontend PWA (React + Vite + TypeScript) para gestão administrativa via API.
 2. Confirme a base URL:
 
 ```env
-VITE_API_BASE_URL=https://minc-api.onrender.com/api/udd
+VITE_API_BASE_URL=https://minc-api.onrender.com/api/education
 ```
 
 ## Scripts

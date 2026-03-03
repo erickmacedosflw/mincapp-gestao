@@ -94,11 +94,6 @@ export default function AppLayout() {
             }}
             items={[
               {
-                key: '/dashboard',
-                icon: <BarChartOutlined />,
-                label: <Link to="/dashboard">Dashboards</Link>,
-              },
-              {
                 key: '/class',
                 icon: <ReadOutlined />,
                 label: <Link to="/class">Turmas</Link>,
@@ -107,6 +102,11 @@ export default function AppLayout() {
                 key: '/students',
                 icon: <TeamOutlined />,
                 label: <Link to="/students">Alunos</Link>,
+              },
+              {
+                key: '/dashboard',
+                icon: <BarChartOutlined />,
+                label: <Link to="/dashboard">Dashboards</Link>,
               },
             ]}
           />

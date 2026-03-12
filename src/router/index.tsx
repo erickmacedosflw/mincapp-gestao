@@ -14,6 +14,7 @@ import StudentsPage from '../pages/students/StudentsPage'
 import InspireStudentsPage from '../pages/students/InspireStudentsPage'
 import StudentAcademicLifePage from '../pages/students/StudentAcademicLifePage'
 import DashboardPage from '../pages/dashboard/DashboardPage'
+import AdminCreatePage from '../pages/admins/AdminCreatePage'
 
 export const appRouter = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ export const appRouter = createBrowserRouter([
       {
         path: 'dashboard',
         element: <DashboardPage />,
+      },
+      {
+        path: 'admins/new',
+        element: <AdminCreatePage />,
       },
       {
         path: 'students',

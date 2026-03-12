@@ -4,6 +4,7 @@ import {
   BarChartOutlined,
   LogoutOutlined,
   ReadOutlined,
+  SafetyCertificateOutlined,
   TeamOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -54,7 +55,9 @@ export default function AppLayout() {
     ? '/students'
     : location.pathname.startsWith('/dashboard')
       ? '/dashboard'
-      : '/class'
+      : location.pathname.startsWith('/admins')
+        ? '/admins/new'
+        : '/class'
 
   return (
     <Layout className="app-shell">
@@ -107,6 +110,11 @@ export default function AppLayout() {
                 key: '/dashboard',
                 icon: <BarChartOutlined />,
                 label: <Link to="/dashboard">Dashboards</Link>,
+              },
+              {
+                key: '/admins/new',
+                icon: <SafetyCertificateOutlined />,
+                label: <Link to="/admins/new">Novo Admin</Link>,
               },
             ]}
           />

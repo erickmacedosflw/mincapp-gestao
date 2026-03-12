@@ -8,3 +8,16 @@ export type ClassItem = {
   createdAt: string
   updatedAt: string
 }
+
+export type ClassStudentAttendanceItem = {
+  id: string
+  name: string
+  cpf: string
+  noteConceptDevotional: string
+}
+
+export type EducationClassResponse = {
+  data: {
+    students: ClassStudentAttendanceItem[]
+  }
+}

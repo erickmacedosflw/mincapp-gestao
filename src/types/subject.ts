@@ -50,3 +50,36 @@ export type SubjectDetailsItem = SubjectItem & {
   weekDays: SubjectWeekDayItem[]
   callExceptions: SubjectCallExceptionItem[]
 }
+
+export type SubjectAttendanceMarkItem = {
+  id: string
+  studentId: string
+  isReview: boolean
+  hasJustify: boolean
+  inArea: boolean
+  lat: string
+  long: string
+  createdAt: string
+}
+
+export type SubjectAttendanceMarkTypeItem = {
+  id: string
+  description: string
+  marks: SubjectAttendanceMarkItem[]
+}
+
+export type SubjectAttendanceDateItem = {
+  date: string
+  markTypes: SubjectAttendanceMarkTypeItem[]
+}
+
+export type SubjectAttendanceUpdatePayload = {
+  check: Array<{
+    studentId: string
+    callTypeId: string
+    date: string
+  }>
+  uncheck: Array<{
+    id: string
+  }>
+}

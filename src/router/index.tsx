@@ -9,6 +9,7 @@ import ClassCreatePage from '../pages/classes/ClassCreatePage'
 import SubjectsPage from '../pages/subjects/SubjectsPage'
 import SubjectCreatePage from '../pages/subjects/SubjectCreatePage'
 import SubjectEditPage from '../pages/subjects/SubjectEditPage'
+import SubjectAttendancePage from '../pages/subjects/SubjectAttendancePage'
 import StudentsPage from '../pages/students/StudentsPage'
 import InspireStudentsPage from '../pages/students/InspireStudentsPage'
 import StudentAcademicLifePage from '../pages/students/StudentAcademicLifePage'
@@ -66,6 +67,10 @@ export const appRouter = createBrowserRouter([
       {
         path: 'class/:classId/subjects/:subjectId/edit',
         element: <SubjectEditPage />,
+      },
+      {
+        path: 'class/:classId/subjects/:subjectId/attendance',
+        element: <SubjectAttendancePage />,
       },
       {
         path: 'class/:classId/students',

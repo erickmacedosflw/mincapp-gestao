@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   BookOutlined,
   CalendarOutlined,
+  CheckSquareOutlined,
   ClockCircleOutlined,
   EditOutlined,
   FilterOutlined,
@@ -155,11 +156,20 @@ export default function SubjectsPage() {
     {
       title: 'Ações',
       key: 'actions',
-      width: 120,
+      width: 260,
       render: (_: unknown, item: SubjectItem) => (
-        <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}>
-          Editar
-        </Button>
+        <Space size={8} wrap>
+          <Button
+            size="small"
+            icon={<CheckSquareOutlined />}
+            onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
+          >
+            Marcações de Presença
+          </Button>
+          <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}>
+            Editar
+          </Button>
+        </Space>
       ),
     },
   ]
@@ -275,6 +285,14 @@ export default function SubjectsPage() {
                       return (
                         <List.Item
                           actions={[
+                            <Button
+                              key={`attendance-${item.id}`}
+                              size="small"
+                              icon={<CheckSquareOutlined />}
+                              onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
+                            >
+                              Presença
+                            </Button>,
                             <Button
                               key={`edit-${item.id}`}
                               size="small"

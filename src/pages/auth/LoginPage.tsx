@@ -1,43 +1,48 @@
-import { useState } from 'react'
-import { Alert, Button, Card, Form, Input, Typography } from 'antd'
-import { useNavigate } from 'react-router-dom'
-import PasswordField from '../../components/forms/PasswordField'
-import { authenticate } from '../../services/auth/auth.service'
+import { useState } from "react";
+import { Alert, Button, Card, Form, Input, Typography } from "antd";
+import { useNavigate } from "react-router-dom";
+import PasswordField from "../../components/forms/PasswordField";
+import { authenticate } from "../../services/auth/auth.service";
 
 type LoginForm = {
-  email: string
-  password: string
-}
+  email: string;
+  password: string;
+};
 
 export default function LoginPage() {
   // Tela de login sem cadastro, focada no acesso rápido para operação diária.
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (values: LoginForm) => {
     try {
-      setLoading(true)
-      setErrorMessage(null)
+      setLoading(true);
+      setErrorMessage(null);
 
       await authenticate({
         email: values.email,
         password: values.password,
-      })
+      });
 
-      navigate('/dashboard', { replace: true })
+      navigate("/class", { replace: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao autenticar'
-      setErrorMessage(message)
+      const message =
+        error instanceof Error ? error.message : "Erro ao autenticar";
+      setErrorMessage(message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="login-page">
       <Card className="login-card" bordered={false}>
-        <img src="/branding/logo-inspire.png" alt="Gestão Inspire" className="login-logo" />
+        <img
+          src="/branding/logo-inspire.png"
+          alt="Gestão Inspire"
+          className="login-logo"
+        />
         <Typography.Text strong>Gestão</Typography.Text>
         <Typography.Paragraph type="secondary">
           Entre com e-mail e senha para acessar a gestão.
@@ -57,8 +62,8 @@ export default function LoginPage() {
             label="E-mail"
             name="email"
             rules={[
-              { required: true, message: 'Informe o e-mail.' },
-              { type: 'email', message: 'Informe um e-mail válido.' },
+              { required: true, message: "Informe o e-mail." },
+              { type: "email", message: "Informe um e-mail válido." },
             ]}
           >
             <Input
@@ -72,12 +77,18 @@ export default function LoginPage() {
           <Form.Item
             label="Senha"
             name="password"
-            rules={[{ required: true, message: 'Informe a senha.' }]}
+            rules={[{ required: true, message: "Informe a senha." }]}
           >
             <PasswordField />
           </Form.Item>
 
-          <Button block type="primary" htmlType="submit" size="large" loading={loading}>
+          <Button
+            block
+            type="primary"
+            htmlType="submit"
+            size="large"
+            loading={loading}
+          >
             Entrar
           </Button>
         </Form>
@@ -87,5 +98,5 @@ export default function LoginPage() {
         </Typography.Text>
       </Card>
     </div>
-  )
+  );
 }

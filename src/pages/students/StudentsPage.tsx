@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
 import {
   BarChartOutlined,
   BookOutlined,
@@ -39,6 +40,7 @@ import {
   Tag,
   Tooltip,
   Typography,
+  Radio,
 } from 'antd'
 import type { MenuProps } from 'antd'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -46,7 +48,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { StudentItem } from '../../types/student'
 import type { StudentsListResponse } from '../../types/student'
 import { getStudentById, getStudentsByClassId } from '../../services/student/student.service'
-import { getClassById } from '../../services/class/class.service'
+import { getClassById, getClasses } from '../../services/class/class.service'
 import { getClassTypes } from '../../services/class/class-type.service'
 import { addStudentToClass, removeStudentFromClass } from '../../services/class/class.service'
 import type { ClassItem } from '../../types/class'
@@ -84,12 +86,15 @@ export default function StudentsPage() {
   const [addressPreviewStudent, setAddressPreviewStudent] = useState<StudentItem | null>(null)
   const [classesPreviewStudent, setClassesPreviewStudent] = useState<StudentItem | null>(null)
   const [removeClassTarget, setRemoveClassTarget] = useState<ClassItem | null>(null)
+  const [transferStudent, setTransferStudent] = useState<StudentItem | null>(null)
+  const [selectedTransferClassId, setSelectedTransferClassId] = useState<string | null>(null)
   const [addClassModalOpen, setAddClassModalOpen] = useState(false)
   const [selectedAvailableClassIds, setSelectedAvailableClassIds] = useState<string[]>([])
   const [addClassConfirmTargets, setAddClassConfirmTargets] = useState<ClassItem[]>([])
   const [showClosedClasses, setShowClosedClasses] = useState(false)
   const [removingStudent, setRemovingStudent] = useState(false)
   const [addingStudent, setAddingStudent] = useState(false)
+  const [transferringStudent, setTransferringStudent] = useState(false)
   const [mapCoordinates, setMapCoordinates] = useState<MapCoordinates | null>(null)
   const [geocodeLoading, setGeocodeLoading] = useState(false)
   const [geocodeError, setGeocodeError] = useState<string | null>(null)
@@ -117,6 +122,12 @@ export default function StudentsPage() {
   const classTypesQuery = useQuery<ClassTypeItem[]>({
     queryKey: ['class-types'],
     queryFn: getClassTypes,
+  })
+
+  const transferClassesQuery = useQuery<ClassItem[]>({
+    queryKey: ['classes-transfer-options', selectedClassQuery.data?.campusId ?? 'all'],
+    queryFn: () => getClasses(selectedClassQuery.data?.campusId),
+    enabled: Boolean(transferStudent),
   })
 
   const studentDetailsQuery = useQuery({
@@ -187,6 +198,57 @@ export default function StudentsPage() {
     return Array.from(groupedMap.entries()).map(([typeName, items]) => ({ typeName, items }))
   }, [availableClassesForAdd, classTypeNameMap])
 
+  const availableClassesForTransfer = useMemo<ClassItem[]>(() => {
+    return (transferClassesQuery.data ?? []).filter((item) => item.id !== classId)
+  }, [classId, transferClassesQuery.data])
+
+  const groupedAvailableClassesForTransfer = useMemo(() => {
+    const groupedMap = new Map<string, ClassItem[]>()
+
+    availableClassesForTransfer.forEach((item) => {
+      const typeName = classTypeNameMap.get(item.classTypeId) ?? 'Sem tipo'
+      const current = groupedMap.get(typeName) ?? []
+      groupedMap.set(typeName, [...current, item])
+    })
+
+    return Array.from(groupedMap.entries()).map(([typeName, items]) => ({ typeName, items }))
+  }, [availableClassesForTransfer, classTypeNameMap])
+
+  const closeTransferModal = () => {
+    if (transferringStudent) {
+      return
+    }
+
+    setTransferStudent(null)
+    setSelectedTransferClassId(null)
+  }
+
+  const getErrorMessage = (error: unknown) => {
+    if (axios.isAxiosError(error)) {
+      const responseMessage = error.response?.data?.message
+
+      if (typeof responseMessage === 'string' && responseMessage.trim()) {
+        return responseMessage
+      }
+    }
+
+    if (error instanceof Error && error.message.trim()) {
+      return error.message
+    }
+
+    return null
+  }
+
+  const refetchStudentsData = async (studentIdToRefresh?: string) => {
+    const requests: Array<Promise<unknown>> = [studentsQuery.refetch()]
+
+    if (classesPreviewStudent?.id && (!studentIdToRefresh || classesPreviewStudent.id === studentIdToRefresh)) {
+      requests.push(studentDetailsQuery.refetch())
+    }
+
+    await Promise.all(requests)
+  }
+
   const handleSearch = (value: string) => {
     setPage(1)
     setSearchTerm(value.trim())
@@ -246,7 +308,7 @@ export default function StudentsPage() {
         studentId: classesPreviewStudent.id,
       })
 
-      await Promise.all([studentDetailsQuery.refetch(), studentsQuery.refetch()])
+      await refetchStudentsData(classesPreviewStudent.id)
 
       message.success('Aluno removido da turma com sucesso.')
       setRemoveClassTarget(null)
@@ -285,7 +347,7 @@ export default function StudentsPage() {
         ),
       )
 
-      await Promise.all([studentDetailsQuery.refetch(), studentsQuery.refetch()])
+      await refetchStudentsData(classesPreviewStudent.id)
 
       message.success(
         addClassConfirmTargets.length === 1
@@ -310,6 +372,66 @@ export default function StudentsPage() {
 
       return [...previous, classIdToToggle]
     })
+  }
+
+  const handleConfirmTransferStudent = async () => {
+    if (!transferStudent || !selectedTransferClassId || !classId) {
+      return
+    }
+
+    const targetClass = availableClassesForTransfer.find((item) => item.id === selectedTransferClassId)
+
+    if (!targetClass) {
+      message.warning('Selecione uma turma válida para continuar.')
+      return
+    }
+
+    try {
+      setTransferringStudent(true)
+
+      await addStudentToClass({
+        classId: targetClass.id,
+        studentId: transferStudent.id,
+      })
+    } catch (error) {
+      const backendMessage = getErrorMessage(error)
+
+      if (backendMessage === 'Estudante já está na turma') {
+        message.error('O aluno já está vinculado à turma selecionada.')
+      } else {
+        message.error(backendMessage ?? 'Não foi possível iniciar a transferência do aluno.')
+      }
+
+      setTransferringStudent(false)
+      return
+    }
+
+    try {
+      await removeStudentFromClass({
+        classId,
+        studentId: transferStudent.id,
+      })
+
+      await refetchStudentsData(transferStudent.id)
+
+      message.success(`Aluno transferido para a turma ${targetClass.name} com sucesso.`)
+      setTransferStudent(null)
+      setSelectedTransferClassId(null)
+    } catch (error) {
+      await refetchStudentsData(transferStudent.id)
+
+      const backendMessage = getErrorMessage(error)
+      message.error(
+        backendMessage
+          ? `Transferência parcial: o aluno foi adicionado na nova turma, mas não foi removido da turma atual. ${backendMessage}`
+          : 'Transferência parcial: o aluno foi adicionado na nova turma, mas não foi removido da turma atual.',
+      )
+
+      setTransferStudent(null)
+      setSelectedTransferClassId(null)
+    } finally {
+      setTransferringStudent(false)
+    }
   }
 
   useEffect(() => {
@@ -497,6 +619,11 @@ export default function StudentsPage() {
         icon: <ReadOutlined />,
         label: 'Turmas do aluno',
       },
+      {
+        key: 'transfer',
+        icon: <TeamOutlined />,
+        label: 'Transferir de turma',
+      },
       student.email
         ? {
             key: 'email',
@@ -532,6 +659,11 @@ export default function StudentsPage() {
 
     if (key === 'classes') {
       setClassesPreviewStudent(student)
+    }
+
+    if (key === 'transfer') {
+      setTransferStudent(student)
+      setSelectedTransferClassId(null)
     }
   }
 
@@ -952,6 +1084,114 @@ export default function StudentsPage() {
         }}
         onConfirm={handleConfirmRemoveFromClass}
       />
+
+      <Modal
+        open={Boolean(transferStudent)}
+        title={
+          <Space size={8} align="center">
+            <TeamOutlined style={{ fontSize: 22 }} />
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              Transferir de turma
+            </Typography.Title>
+          </Space>
+        }
+        onCancel={closeTransferModal}
+        onOk={handleConfirmTransferStudent}
+        okText="Transferir"
+        cancelText="Cancelar"
+        okButtonProps={{
+          disabled: !selectedTransferClassId,
+          loading: transferringStudent,
+        }}
+        cancelButtonProps={{
+          disabled: transferringStudent,
+        }}
+        width={760}
+      >
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Card size="small">
+            <Space size={10} align="center">
+              <Avatar size={42} src={transferStudent?.avatar ?? undefined} icon={<UserOutlined />} />
+              <Space direction="vertical" size={0}>
+                <Typography.Title level={5} style={{ margin: 0, fontSize: 16 }}>
+                  {transferStudent?.name}
+                </Typography.Title>
+                <Typography.Text type="secondary">
+                  Turma atual: {selectedClass?.name ?? '-'}
+                </Typography.Text>
+              </Space>
+            </Space>
+          </Card>
+
+          {transferClassesQuery.isLoading ? (
+            <Space style={{ width: '100%', justifyContent: 'center', minHeight: 180 }}>
+              <Spin />
+            </Space>
+          ) : transferClassesQuery.isError ? (
+            <Alert type="error" showIcon message="Não foi possível carregar as turmas disponíveis para transferência." />
+          ) : availableClassesForTransfer.length === 0 ? (
+            <Empty description="Nenhuma outra turma disponível para transferência." />
+          ) : (
+            <Radio.Group
+              style={{ width: '100%' }}
+              value={selectedTransferClassId}
+              onChange={(event) => setSelectedTransferClassId(event.target.value)}
+            >
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <Typography.Text strong>Selecione a nova turma do aluno</Typography.Text>
+
+                {groupedAvailableClassesForTransfer.map((group) => (
+                  <Space key={group.typeName} direction="vertical" size={10} style={{ width: '100%' }}>
+                    <Typography.Text strong>{group.typeName}</Typography.Text>
+                    <Row gutter={[10, 10]}>
+                      {group.items.map((classItem) => {
+                        const selected = selectedTransferClassId === classItem.id
+
+                        return (
+                          <Col key={classItem.id} xs={24} md={12}>
+                            <div
+                              style={{
+                                position: 'relative',
+                                border: `1px solid ${selected ? '#1677FF' : '#E8E8E8'}`,
+                                borderRadius: 10,
+                                padding: 1,
+                              }}
+                            >
+                              {selected ? (
+                                <CheckCircleFilled
+                                  style={{
+                                    position: 'absolute',
+                                    top: 10,
+                                    right: 10,
+                                    color: 'var(--ant-color-primary)',
+                                    zIndex: 1,
+                                    fontSize: 18,
+                                    background: '#fff',
+                                    borderRadius: '50%',
+                                  }}
+                                />
+                              ) : null}
+
+                              <ClassCard
+                                compact
+                                data={classItem}
+                                classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                                showRemainingDays={false}
+                                onClick={() => setSelectedTransferClassId(classItem.id)}
+                                headerExtra={<Radio checked={selected} />}
+                              />
+                            </div>
+                          </Col>
+                        )
+                      })}
+                    </Row>
+                  </Space>
+                ))}
+              </Space>
+            </Radio.Group>
+          )}
+        </Space>
+      </Modal>
 
       <Modal
         open={addClassModalOpen}

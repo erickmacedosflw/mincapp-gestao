@@ -1,5 +1,5 @@
 import { apiClient } from '../api/client'
-import type { ClassItem } from '../../types/class'
+import type { ClassItem, EducationClassResponse } from '../../types/class'
 
 const CLASS_CAMPUS_ID = import.meta.env.VITE_CLASS_CAMPUS_ID?.trim()
 
@@ -14,8 +14,10 @@ type CreateClassParams = {
   subscriptionEndDate: string
 }
 
-export async function getClasses() {
-  const response = await apiClient.get<ClassItem[]>('/class')
+export async function getClasses(campusId?: string) {
+  const response = await apiClient.get<ClassItem[]>('/class', {
+    params: campusId ? { campusId } : undefined,
+  })
   return response.data
 }
 
@@ -34,7 +36,10 @@ type AddStudentToClassParams = {
   studentId: string
 }
 
-export async function removeStudentFromClass({ classId, studentId }: RemoveStudentFromClassParams) {
+export async function removeStudentFromClass({
+  classId,
+  studentId,
+}: RemoveStudentFromClassParams) {
   await apiClient.delete(`/class/student/remove/${classId}`, {
     data: {
       studentId,
@@ -42,7 +47,10 @@ export async function removeStudentFromClass({ classId, studentId }: RemoveStude
   })
 }
 
-export async function addStudentToClass({ classId, studentId }: AddStudentToClassParams) {
+export async function addStudentToClass({
+  classId,
+  studentId,
+}: AddStudentToClassParams) {
   await apiClient.post(`/class/student/add/${classId}`, {
     studentIds: [studentId],
   })
@@ -55,4 +63,20 @@ export async function createClass(payload: CreateClassParams) {
   })
 
   return response.data
+}
+
+export async function getEducationClassStudents(classId: string) {
+  const response = await apiClient.get<EducationClassResponse | { data?: { students?: EducationClassResponse['data']['students'] } } | { students?: EducationClassResponse['data']['students'] }>(
+    `/class/${classId}`,
+  )
+
+  if (Array.isArray((response.data as EducationClassResponse)?.data?.students)) {
+    return (response.data as EducationClassResponse).data.students
+  }
+
+  if (Array.isArray((response.data as { students?: EducationClassResponse['data']['students'] })?.students)) {
+    return (response.data as { students: EducationClassResponse['data']['students'] }).students
+  }
+
+  return []
 }

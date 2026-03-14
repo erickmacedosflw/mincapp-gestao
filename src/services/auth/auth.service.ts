@@ -1,3 +1,4 @@
+import type { TenantId } from '../../config/tenant'
 import { AxiosError } from 'axios'
 import { apiClient } from '../api/client'
 import type { AuthResponse, LoginPayload } from '../../types/auth'
@@ -7,12 +8,12 @@ type ApiError = {
   message?: string
 }
 
-export async function authenticate(payload: LoginPayload) {
+export async function authenticate(payload: LoginPayload, tenant: TenantId) {
   try {
     const response = await apiClient.post<AuthResponse>('/admin/authenticate', payload)
     const data = response.data
 
-    saveAuthSession(data.token, data.admin)
+    saveAuthSession(data.token, data.admin, tenant)
 
     return data
   } catch (error) {

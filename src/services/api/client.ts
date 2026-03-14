@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearAuthSession, getAuthToken } from '../auth/token.storage'
+import { clearAuthSession, getAuthToken, getTenantSelection } from '../auth/token.storage'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.trim()
 
@@ -12,16 +12,22 @@ export const apiClient = axios.create({
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
-    'x-tenant-id': 'inspire'
   },
 })
 
 apiClient.interceptors.request.use((config) => {
   const token = getAuthToken()
+  const tenant = getTenantSelection()
+
+  if (!tenant) {
+    return Promise.reject(new Error('Selecione o ambiente antes de continuar.'))
+  }
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  config.headers['x-tenant-id'] = tenant
 
   return config
 })

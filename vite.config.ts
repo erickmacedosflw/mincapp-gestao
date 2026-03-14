@@ -17,21 +17,21 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['branding/logo-inspire.png'],
+      includeAssets: ['branding/logoInspire.png', 'branding/logoEDF.png'],
       manifest: {
-        name: 'Gestão Inspire',
-        short_name: 'Inspire',
+        name: 'Gestão',
+        short_name: 'Gestão',
         description: 'Painel administrativo para gestão via API',
         start_url: '/',
         display: 'standalone',
         icons: [
           {
-            src: '/branding/logo-inspire.png',
+            src: '/branding/logoInspire.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: '/branding/logo-inspire.png',
+            src: '/branding/logoInspire.png',
             sizes: '512x512',
             type: 'image/png',
           },

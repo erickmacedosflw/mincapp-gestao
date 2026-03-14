@@ -1,4 +1,4 @@
-# Gestão Inspire
+# Gestão
 
 Frontend PWA (React + Vite + TypeScript) para gestão administrativa via API.
 

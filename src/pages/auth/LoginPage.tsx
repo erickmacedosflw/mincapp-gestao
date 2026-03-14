@@ -1,10 +1,21 @@
-import { useState } from "react";
-import { Alert, Button, Card, Form, Input, Typography } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Card, Form, Input, Select, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
+import { applyTenantBranding } from "../../app/app-branding";
 import PasswordField from "../../components/forms/PasswordField";
+import {
+  getTenantBrand,
+  TENANT_OPTIONS,
+  type TenantId,
+} from "../../config/tenant";
 import { authenticate } from "../../services/auth/auth.service";
+import {
+  getTenantSelection,
+  saveTenantSelection,
+} from "../../services/auth/token.storage";
 
 type LoginForm = {
+  tenant: TenantId;
   email: string;
   password: string;
 };
@@ -12,18 +23,31 @@ type LoginForm = {
 export default function LoginPage() {
   // Tela de login sem cadastro, focada no acesso rápido para operação diária.
   const navigate = useNavigate();
+  const [form] = Form.useForm<LoginForm>();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<TenantId | null>(
+    getTenantSelection(),
+  );
+  const brand = useMemo(() => getTenantBrand(selectedTenant), [selectedTenant]);
+
+  useEffect(() => {
+    applyTenantBranding(brand);
+  }, [brand]);
 
   const handleSubmit = async (values: LoginForm) => {
     try {
       setLoading(true);
       setErrorMessage(null);
+      saveTenantSelection(values.tenant);
 
-      await authenticate({
-        email: values.email,
-        password: values.password,
-      });
+      await authenticate(
+        {
+          email: values.email,
+          password: values.password,
+        },
+        values.tenant,
+      );
 
       navigate("/class", { replace: true });
     } catch (error) {
@@ -39,11 +63,12 @@ export default function LoginPage() {
     <div className="login-page">
       <Card className="login-card" bordered={false}>
         <img
-          src="/branding/logo-inspire.png"
-          alt="Gestão Inspire"
+          src={brand.logoSrc}
+          alt={brand.fullName}
           className="login-logo"
+          style={{ margin: "0 auto 16px" }}
         />
-        <Typography.Text strong>Gestão</Typography.Text>
+        <Typography.Text strong>{brand.fullName}</Typography.Text>
         <Typography.Paragraph type="secondary">
           Entre com e-mail e senha para acessar a gestão.
         </Typography.Paragraph>
@@ -57,7 +82,14 @@ export default function LoginPage() {
           />
         ) : null}
 
-        <Form<LoginForm> layout="vertical" onFinish={handleSubmit}>
+        <Form<LoginForm>
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{
+            tenant: selectedTenant ?? undefined,
+          }}
+        >
           <Form.Item
             label="E-mail"
             name="email"
@@ -80,6 +112,25 @@ export default function LoginPage() {
             rules={[{ required: true, message: "Informe a senha." }]}
           >
             <PasswordField />
+          </Form.Item>
+
+          <Form.Item
+            label="Selecione o ambiente"
+            name="tenant"
+            rules={[{ required: true, message: "Selecione o ambiente." }]}
+          >
+            <Select
+              size="large"
+              placeholder="Escolha o ambiente"
+              options={TENANT_OPTIONS.map((tenant) => ({
+                value: tenant.id,
+                label: tenant.label,
+              }))}
+              onChange={(value: TenantId) => {
+                setSelectedTenant(value);
+                setErrorMessage(null);
+              }}
+            />
           </Form.Item>
 
           <Button

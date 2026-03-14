@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Layout, Menu, Space, Typography } from 'antd'
 import {
   BarChartOutlined,
@@ -12,7 +12,9 @@ import {
   MoonOutlined,
 } from '@ant-design/icons'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { clearAuthSession, getAdminProfile } from '../../services/auth/token.storage'
+import { applyTenantBranding } from '../../app/app-branding'
+import { getTenantBrand } from '../../config/tenant'
+import { clearAuthSession, getAdminProfile, getTenantSelection } from '../../services/auth/token.storage'
 import { useAppTheme } from '../../app/theme.context'
 import AppDialog from '../feedback/AppDialog'
 
@@ -23,6 +25,8 @@ export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const admin = getAdminProfile()
+  const tenant = getTenantSelection()
+  const brand = getTenantBrand(tenant)
   const { mode, toggleMode } = useAppTheme()
   const [collapsed, setCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -59,6 +63,10 @@ export default function AppLayout() {
         ? '/admins/new'
         : '/class'
 
+  useEffect(() => {
+    applyTenantBranding(brand)
+  }, [brand])
+
   return (
     <Layout className="app-shell">
       <Sider
@@ -74,7 +82,7 @@ export default function AppLayout() {
       >
         <div className="app-sider-inner">
           <div className="app-brand">
-            <img src="/branding/logo-inspire.png" alt="Gestão Inspire" className="app-brand-logo" />
+            <img src={brand.logoSrc} alt={brand.fullName} className="app-brand-logo" />
             {isMobile && !collapsed ? (
               <Button
                 type="text"
@@ -163,7 +171,7 @@ export default function AppLayout() {
                 </Space>
               ) : (
                 <Typography.Text>
-                  {admin?.name ? `Olá, ${admin.name}` : 'Painel Gestão Inspire'}
+                  {admin?.name ? `Olá, ${admin.name}` : `Painel ${brand.fullName}`}
                 </Typography.Text>
               )}
             </Space>

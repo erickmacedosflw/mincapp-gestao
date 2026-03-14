@@ -164,6 +164,10 @@ body,
   margin-bottom: 8px;
 }
 
+.login-card .ant-select {
+  width: 100%;
+}
+
 .ant-card .ant-input-outlined,
 .ant-card .ant-input-affix-wrapper,
 .ant-card .ant-input-number,

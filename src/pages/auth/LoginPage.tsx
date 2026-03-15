@@ -49,7 +49,7 @@ export default function LoginPage() {
         values.tenant,
       );
 
-      navigate("/class", { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Erro ao autenticar";

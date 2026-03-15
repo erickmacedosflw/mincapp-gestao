@@ -12,9 +12,11 @@ import {
   MoonOutlined,
 } from '@ant-design/icons'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { ADMIN_PERMISSIONS } from '../../access/admin-access'
+import { useAdminAccess } from '../../access/use-admin-access'
 import { applyTenantBranding } from '../../app/app-branding'
 import { getTenantBrand } from '../../config/tenant'
-import { clearAuthSession, getAdminProfile, getTenantSelection } from '../../services/auth/token.storage'
+import { clearAuthSession, getTenantSelection } from '../../services/auth/token.storage'
 import { useAppTheme } from '../../app/theme.context'
 import AppDialog from '../feedback/AppDialog'
 
@@ -24,7 +26,7 @@ export default function AppLayout() {
   // Layout principal para manter UX consistente no painel administrativo.
   const location = useLocation()
   const navigate = useNavigate()
-  const admin = getAdminProfile()
+  const { admin, canAccessClassHub, hasPermission } = useAdminAccess()
   const tenant = getTenantSelection()
   const brand = getTenantBrand(tenant)
   const { mode, toggleMode } = useAppTheme()
@@ -55,13 +57,46 @@ export default function AppLayout() {
   }
 
   const isClassManagementRoute = /^\/class\/.+/.test(location.pathname)
+  const menuItems = [
+    canAccessClassHub()
+      ? {
+          key: '/class',
+          icon: <ReadOutlined />,
+          label: <Link to="/class">Turmas</Link>,
+        }
+      : null,
+    hasPermission(ADMIN_PERMISSIONS.gerenciarAlunos)
+      ? {
+          key: '/students',
+          icon: <TeamOutlined />,
+          label: <Link to="/students">Alunos</Link>,
+        }
+      : null,
+    hasPermission(ADMIN_PERMISSIONS.visualizarDashboards)
+      ? {
+          key: '/dashboard',
+          icon: <BarChartOutlined />,
+          label: <Link to="/dashboard">Dashboards</Link>,
+        }
+      : null,
+    hasPermission(ADMIN_PERMISSIONS.gerenciarAdmins)
+      ? {
+          key: '/admins/new',
+          icon: <SafetyCertificateOutlined />,
+          label: <Link to="/admins/new">Novo Admin</Link>,
+        }
+      : null,
+  ].filter(Boolean)
+
   const selectedMenuKey = location.pathname.startsWith('/students')
     ? '/students'
     : location.pathname.startsWith('/dashboard')
       ? '/dashboard'
       : location.pathname.startsWith('/admins')
         ? '/admins/new'
-        : '/class'
+        : location.pathname.startsWith('/class')
+          ? '/class'
+          : ''
 
   useEffect(() => {
     applyTenantBranding(brand)
@@ -103,28 +138,7 @@ export default function AppLayout() {
                 setCollapsed(true)
               }
             }}
-            items={[
-              {
-                key: '/class',
-                icon: <ReadOutlined />,
-                label: <Link to="/class">Turmas</Link>,
-              },
-              {
-                key: '/students',
-                icon: <TeamOutlined />,
-                label: <Link to="/students">Alunos</Link>,
-              },
-              {
-                key: '/dashboard',
-                icon: <BarChartOutlined />,
-                label: <Link to="/dashboard">Dashboards</Link>,
-              },
-              {
-                key: '/admins/new',
-                icon: <SafetyCertificateOutlined />,
-                label: <Link to="/admins/new">Novo Admin</Link>,
-              },
-            ]}
+            items={menuItems}
           />
           <div className="app-sider-actions">
             <Button

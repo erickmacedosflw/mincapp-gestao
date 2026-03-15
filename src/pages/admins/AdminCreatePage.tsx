@@ -1,9 +1,16 @@
-import { useState } from 'react'
-import { Alert, Breadcrumb, Button, Card, Form, Input, Space, Typography, message } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
+import { Alert, Breadcrumb, Button, Card, Checkbox, Col, Form, Input, Row, Space, Typography, message } from 'antd'
 import { SafetyCertificateOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import PasswordField from '../../components/forms/PasswordField'
-import { createAdmin } from '../../services/admin/admin.service'
+import { DEFAULT_ADMIN_PERMISSIONS } from '../../constants/admin-permissions'
+import {
+  assignPermissionToAdmin,
+  createAdmin,
+  createPermissionTypesBulk,
+  getPermissionTypes,
+} from '../../services/admin/admin.service'
+import type { PermissionTypeItem } from '../../types/admin'
 
 type AdminCreateFormValues = {
   name: string
@@ -14,21 +21,82 @@ type AdminCreateFormValues = {
 export default function AdminCreatePage() {
   const [form] = Form.useForm<AdminCreateFormValues>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [permissionsLoading, setPermissionsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [permissionsErrorMessage, setPermissionsErrorMessage] = useState<string | null>(null)
+  const [permissionSearch, setPermissionSearch] = useState('')
+  const [permissions, setPermissions] = useState<PermissionTypeItem[]>([])
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([])
+
+  useEffect(() => {
+    async function loadPermissions() {
+      try {
+        setPermissionsLoading(true)
+        setPermissionsErrorMessage(null)
+
+        const currentPermissions = await getPermissionTypes()
+        const existingNames = new Set(currentPermissions.map((item) => item.name))
+        const missingPermissions = DEFAULT_ADMIN_PERMISSIONS.filter((item) => !existingNames.has(item.name))
+
+        if (missingPermissions.length > 0) {
+          await createPermissionTypesBulk({ permissions: missingPermissions })
+        }
+
+        const refreshedPermissions = await getPermissionTypes()
+        setPermissions(
+          [...refreshedPermissions].sort((firstItem, secondItem) =>
+            firstItem.name.localeCompare(secondItem.name, 'pt-BR'),
+          ),
+        )
+      } catch (error) {
+        const nextMessage =
+          error instanceof Error ? error.message : 'Não foi possível carregar as permissões disponíveis.'
+
+        setPermissionsErrorMessage(nextMessage)
+      } finally {
+        setPermissionsLoading(false)
+      }
+    }
+
+    loadPermissions()
+  }, [])
+
+  const filteredPermissions = useMemo(() => {
+    const normalizedSearch = permissionSearch.trim().toLowerCase()
+
+    if (!normalizedSearch) {
+      return permissions
+    }
+
+    return permissions.filter((item) => {
+      const haystack = `${item.name} ${item.description}`.toLowerCase()
+      return haystack.includes(normalizedSearch)
+    })
+  }, [permissionSearch, permissions])
+
+  const allPermissionsSelected = permissions.length > 0 && selectedPermissionIds.length === permissions.length
 
   const handleSubmit = async (values: AdminCreateFormValues) => {
     try {
       setIsSubmitting(true)
       setErrorMessage(null)
 
-      await createAdmin({
+      const createdAdmin = await createAdmin({
         name: values.name.trim(),
         email: values.email.trim(),
         password: values.password,
       })
 
+      if (selectedPermissionIds.length > 0) {
+        await Promise.all(
+          selectedPermissionIds.map((permissionId) => assignPermissionToAdmin(createdAdmin.id, permissionId)),
+        )
+      }
+
       message.success('Administrador cadastrado com sucesso.')
       form.resetFields()
+      setSelectedPermissionIds([])
+      setPermissionSearch('')
     } catch (error) {
       const nextMessage =
         error instanceof Error ? error.message : 'Não foi possível cadastrar o administrador.'
@@ -133,6 +201,70 @@ export default function AdminCreatePage() {
               </Button>
             </Space>
           </Form>
+
+          <Card size="small" title="Permissões do administrador">
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <Typography.Text type="secondary">
+                Selecione as permissões que serão atribuídas ao novo administrador após o cadastro.
+              </Typography.Text>
+
+              {permissionsErrorMessage ? <Alert type="error" showIcon message={permissionsErrorMessage} /> : null}
+
+              <Input.Search
+                value={permissionSearch}
+                onChange={(event) => setPermissionSearch(event.target.value)}
+                placeholder="Buscar permissões por nome ou descrição"
+                allowClear
+                disabled={permissionsLoading || isSubmitting}
+              />
+
+              <Space size={8} wrap>
+                <Button
+                  onClick={() => setSelectedPermissionIds(permissions.map((item) => item.id))}
+                  disabled={permissionsLoading || permissions.length === 0 || allPermissionsSelected || isSubmitting}
+                >
+                  Marcar todas
+                </Button>
+                <Button
+                  onClick={() => setSelectedPermissionIds([])}
+                  disabled={permissionsLoading || selectedPermissionIds.length === 0 || isSubmitting}
+                >
+                  Desmarcar todas
+                </Button>
+                <Typography.Text type="secondary">
+                  {selectedPermissionIds.length} de {permissions.length} selecionada(s)
+                </Typography.Text>
+              </Space>
+
+              {permissionsLoading ? (
+                <Typography.Text type="secondary">Carregando permissões...</Typography.Text>
+              ) : filteredPermissions.length === 0 ? (
+                <Typography.Text type="secondary">Nenhuma permissão encontrada para a busca informada.</Typography.Text>
+              ) : (
+                <Checkbox.Group
+                  value={selectedPermissionIds}
+                  onChange={(checkedValues) => setSelectedPermissionIds(checkedValues as string[])}
+                  style={{ width: '100%' }}
+                  disabled={isSubmitting}
+                >
+                  <Row gutter={[12, 12]}>
+                    {filteredPermissions.map((permission) => (
+                      <Col xs={24} key={permission.id}>
+                        <Card size="small">
+                          <Checkbox value={permission.id} style={{ width: '100%' }}>
+                            <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                              <Typography.Text strong>{permission.name}</Typography.Text>
+                              <Typography.Text type="secondary">{permission.description}</Typography.Text>
+                            </Space>
+                          </Checkbox>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                </Checkbox.Group>
+              )}
+            </Space>
+          </Card>
         </Space>
       </Card>
     </Space>

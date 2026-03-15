@@ -43,6 +43,8 @@ import {
 import type { MenuProps } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ADMIN_PERMISSIONS } from '../../access/admin-access'
+import { useAdminAccess } from '../../access/use-admin-access'
 import type { ClassItem } from '../../types/class'
 import type { ClassTypeItem } from '../../types/class-type'
 import type { StudentItem } from '../../types/student'
@@ -72,6 +74,8 @@ export default function InspireStudentsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const screens = Grid.useBreakpoint()
+  const { hasPermission } = useAdminAccess()
+  const canViewDashboards = hasPermission(ADMIN_PERMISSIONS.visualizarDashboards)
   const listTopRef = useRef<HTMLDivElement | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maptalks.Map | null>(null)
@@ -712,9 +716,11 @@ export default function InspireStudentsPage() {
           </Space>
           <Typography.Text type="secondary">Listagem paginada de todos os alunos do sistema.</Typography.Text>
           <Typography.Text strong>Total de alunos: {students.length}</Typography.Text>
-          <Button icon={<BarChartOutlined />} onClick={() => navigate('/dashboard')} style={{ width: 'fit-content' }}>
-            Dashboard de alunos
-          </Button>
+          {canViewDashboards ? (
+            <Button icon={<BarChartOutlined />} onClick={() => navigate('/dashboard')} style={{ width: 'fit-content' }}>
+              Dashboard de alunos
+            </Button>
+          ) : null}
         </Space>
       </Card>
 

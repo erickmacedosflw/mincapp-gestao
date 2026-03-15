@@ -1,3 +1,4 @@
+import type { PermissionTypeItem } from './admin'
 import type { TenantId } from '../config/tenant'
 
 export type LoginPayload = {
@@ -9,6 +10,10 @@ export type AdminProfile = {
   id: string
   name: string
   email: string
+  isActive?: boolean
+  permissions?: PermissionTypeItem[]
+  createdAt?: string
+  updatedAt?: string
 }
 
 export type AuthResponse = {

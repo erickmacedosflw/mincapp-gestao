@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Col, Empty, Radio, Row, Select, Space, Spin, Typography } from 'antd'
 import { PlusOutlined, ReadOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { ADMIN_PERMISSIONS } from '../../access/admin-access'
+import { useAdminAccess } from '../../access/use-admin-access'
 import type { ClassItem } from '../../types/class'
 import { getClasses } from '../../services/class/class.service'
 import ClassCard from '../../components/classes/ClassCard'
@@ -13,6 +15,8 @@ type ClassFilter = 'ongoing' | 'closed'
 
 export default function ClassesPage() {
   const navigate = useNavigate()
+  const { hasPermission } = useAdminAccess()
+  const canManageClasses = hasPermission(ADMIN_PERMISSIONS.gerenciarTurmas)
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [classTypes, setClassTypes] = useState<ClassTypeItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -95,9 +99,11 @@ export default function ClassesPage() {
               Turmas
             </Typography.Title>
           </Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/class/new')}>
-            Nova turma
-          </Button>
+          {canManageClasses ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/class/new')}>
+              Nova turma
+            </Button>
+          ) : null}
         </div>
         <Typography.Text type="secondary">
           Lista de turmas com período e status.

@@ -27,6 +27,8 @@ import {
   Typography,
 } from 'antd'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ADMIN_PERMISSIONS } from '../../access/admin-access'
+import { useAdminAccess } from '../../access/use-admin-access'
 import type { SubjectItem } from '../../types/subject'
 import type { ClassItem } from '../../types/class'
 import { getSubjectsByClassId } from '../../services/subject/subject.service'
@@ -39,6 +41,9 @@ export default function SubjectsPage() {
   const { classId } = useParams()
   const navigate = useNavigate()
   const screens = Grid.useBreakpoint()
+  const { hasPermission } = useAdminAccess()
+  const canManageSubjects = hasPermission(ADMIN_PERMISSIONS.gerenciarMaterias)
+  const canManageAttendance = hasPermission(ADMIN_PERMISSIONS.gerenciarPresencas)
 
   const [subjects, setSubjects] = useState<SubjectItem[]>([])
   const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null)
@@ -159,16 +164,20 @@ export default function SubjectsPage() {
       width: 260,
       render: (_: unknown, item: SubjectItem) => (
         <Space size={8} wrap>
-          <Button
-            size="small"
-            icon={<CheckSquareOutlined />}
-            onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
-          >
-            Marcações de Presença
-          </Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}>
-            Editar
-          </Button>
+          {canManageAttendance ? (
+            <Button
+              size="small"
+              icon={<CheckSquareOutlined />}
+              onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
+            >
+              Marcações de Presença
+            </Button>
+          ) : null}
+          {canManageSubjects ? (
+            <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}>
+              Editar
+            </Button>
+          ) : null}
         </Space>
       ),
     },
@@ -247,9 +256,11 @@ export default function SubjectsPage() {
                       Matérias da turma {selectedClass.name}
                     </Typography.Title>
                   </Space>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`/class/${selectedClass.id}/subjects/new`)}>
-                    Nova matéria
-                  </Button>
+                  {canManageSubjects ? (
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`/class/${selectedClass.id}/subjects/new`)}>
+                      Nova matéria
+                    </Button>
+                  ) : null}
                 </div>
 
                 <Space size={8} align="center" wrap>
@@ -285,23 +296,27 @@ export default function SubjectsPage() {
                       return (
                         <List.Item
                           actions={[
-                            <Button
-                              key={`attendance-${item.id}`}
-                              size="small"
-                              icon={<CheckSquareOutlined />}
-                              onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
-                            >
-                              Presença
-                            </Button>,
-                            <Button
-                              key={`edit-${item.id}`}
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}
-                            >
-                              Editar
-                            </Button>,
-                          ]}
+                            canManageAttendance ? (
+                              <Button
+                                key={`attendance-${item.id}`}
+                                size="small"
+                                icon={<CheckSquareOutlined />}
+                                onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
+                              >
+                                Presença
+                              </Button>
+                            ) : null,
+                            canManageSubjects ? (
+                              <Button
+                                key={`edit-${item.id}`}
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}
+                              >
+                                Editar
+                              </Button>
+                            ) : null,
+                          ].filter(Boolean)}
                         >
                           <List.Item.Meta
                             title={

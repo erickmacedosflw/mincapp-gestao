@@ -30,6 +30,8 @@ import {
   message,
 } from 'antd'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ADMIN_PERMISSIONS } from '../../access/admin-access'
+import { useAdminAccess } from '../../access/use-admin-access'
 import type { ClassItem } from '../../types/class'
 import { getClassById } from '../../services/class/class.service'
 import { getClassTypes } from '../../services/class/class-type.service'
@@ -55,6 +57,10 @@ import AppDialog from '../../components/feedback/AppDialog'
 export default function ClassManagementPage() {
   const navigate = useNavigate()
   const { classId } = useParams()
+  const { hasPermission } = useAdminAccess()
+  const canManageStudents = hasPermission(ADMIN_PERMISSIONS.gerenciarAlunos)
+  const canManageSubjects = hasPermission(ADMIN_PERMISSIONS.gerenciarMaterias)
+  const canManageJustifications = hasPermission(ADMIN_PERMISSIONS.gerenciarJustificativas)
 
   const [classData, setClassData] = useState<ClassItem | null>(null)
   const [classTypes, setClassTypes] = useState<ClassTypeItem[]>([])
@@ -99,34 +105,40 @@ export default function ClassManagementPage() {
         setClassData(foundClass)
         setClassTypes(types)
 
-        try {
-          const subjects = await getSubjectsByClassId(classId)
-          setSubjectsCount(subjects.length)
-          const currentOngoing = subjects.filter((item) => getPeriodStatus(item.initDate, item.finishDate) === 'ongoing')
-          setOngoingSubjects(currentOngoing)
-        } catch {
-          setSubjectsCount(0)
-          setOngoingSubjects([])
+        if (canManageSubjects) {
+          try {
+            const subjects = await getSubjectsByClassId(classId)
+            setSubjectsCount(subjects.length)
+            const currentOngoing = subjects.filter((item) => getPeriodStatus(item.initDate, item.finishDate) === 'ongoing')
+            setOngoingSubjects(currentOngoing)
+          } catch {
+            setSubjectsCount(0)
+            setOngoingSubjects([])
+          }
         }
 
-        try {
-          const studentsResponse = await getStudentsByClassId({
-            classId,
-            page: 1,
-            perPage: 1,
-          })
-          setStudentsCount(studentsResponse.total)
-        } catch {
-          setStudentsCount(0)
+        if (canManageStudents) {
+          try {
+            const studentsResponse = await getStudentsByClassId({
+              classId,
+              page: 1,
+              perPage: 1,
+            })
+            setStudentsCount(studentsResponse.total)
+          } catch {
+            setStudentsCount(0)
+          }
         }
 
-        try {
-          const pendingResponse = await getJustificationsByClassId({ classId, status: 'PENDING' })
-          setPendingJustificationsCount(pendingResponse.data.length)
-          setPendingJustifications(pendingResponse.data)
-        } catch {
-          setPendingJustifications([])
-          setPendingJustificationsCount(0)
+        if (canManageJustifications) {
+          try {
+            const pendingResponse = await getJustificationsByClassId({ classId, status: 'PENDING' })
+            setPendingJustificationsCount(pendingResponse.data.length)
+            setPendingJustifications(pendingResponse.data)
+          } catch {
+            setPendingJustifications([])
+            setPendingJustificationsCount(0)
+          }
         }
       } catch {
         setErrorMessage('Não foi possível carregar os dados da turma.')
@@ -136,7 +148,7 @@ export default function ClassManagementPage() {
     }
 
     loadData()
-  }, [classId])
+  }, [canManageJustifications, canManageStudents, canManageSubjects, classId])
 
   const typeName = useMemo(() => {
     if (!classData) {
@@ -294,40 +306,46 @@ export default function ClassManagementPage() {
                   Menu da turma
                 </Typography.Title>
 
-                <Card hoverable size="small" onClick={() => navigate(`/class/${classData.id}/subjects`)} style={{ cursor: 'pointer' }}>
-                  <Space size={10} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Space size={10} align="center" style={{ flex: 1 }}>
-                      <BookOutlined style={{ fontSize: 20 }} />
-                      <Typography.Text strong>Matérias</Typography.Text>
+                {canManageSubjects ? (
+                  <Card hoverable size="small" onClick={() => navigate(`/class/${classData.id}/subjects`)} style={{ cursor: 'pointer' }}>
+                    <Space size={10} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Space size={10} align="center" style={{ flex: 1 }}>
+                        <BookOutlined style={{ fontSize: 20 }} />
+                        <Typography.Text strong>Matérias</Typography.Text>
+                      </Space>
+                      <Badge count={subjectsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
                     </Space>
-                    <Badge count={subjectsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
-                  </Space>
-                </Card>
+                  </Card>
+                ) : null}
 
-                <Card hoverable size="small" onClick={() => navigate(`/class/${classData.id}/students`)} style={{ cursor: 'pointer' }}>
-                  <Space size={10} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Space size={10} align="center" style={{ flex: 1 }}>
-                      <TeamOutlined style={{ fontSize: 20 }} />
-                      <Typography.Text strong>Alunos</Typography.Text>
+                {canManageStudents ? (
+                  <Card hoverable size="small" onClick={() => navigate(`/class/${classData.id}/students`)} style={{ cursor: 'pointer' }}>
+                    <Space size={10} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Space size={10} align="center" style={{ flex: 1 }}>
+                        <TeamOutlined style={{ fontSize: 20 }} />
+                        <Typography.Text strong>Alunos</Typography.Text>
+                      </Space>
+                      <Badge count={studentsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
                     </Space>
-                    <Badge count={studentsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
-                  </Space>
-                </Card>
+                  </Card>
+                ) : null}
 
-                <Card
-                  hoverable
-                  size="small"
-                  onClick={() => navigate(`/class/${classData.id}/justifications`)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <Space size={10} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Space size={10} align="center">
-                      <FileTextOutlined style={{ fontSize: 20 }} />
-                      <Typography.Text strong>Justificativas</Typography.Text>
+                {canManageJustifications ? (
+                  <Card
+                    hoverable
+                    size="small"
+                    onClick={() => navigate(`/class/${classData.id}/justifications`)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Space size={10} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                      <Space size={10} align="center">
+                        <FileTextOutlined style={{ fontSize: 20 }} />
+                        <Typography.Text strong>Justificativas</Typography.Text>
+                      </Space>
+                      {pendingJustificationsCount > 0 ? <Badge count={pendingJustificationsCount} color="orange" overflowCount={99} /> : null}
                     </Space>
-                    {pendingJustificationsCount > 0 ? <Badge count={pendingJustificationsCount} color="orange" overflowCount={99} /> : null}
-                  </Space>
-                </Card>
+                  </Card>
+                ) : null}
               </Space>
             </Card>
           </Space>
@@ -336,57 +354,68 @@ export default function ClassManagementPage() {
         <Col xs={24} lg={17}>
           <Card>
             <Space direction="vertical" size={8} style={{ width: '100%' }}>
-              <Space size={6} align="center">
-                <BookOutlined />
-                <Typography.Text strong>Matéria atual em andamento</Typography.Text>
-              </Space>
+              {canManageSubjects ? (
+                <>
+                  <Space size={6} align="center">
+                    <BookOutlined />
+                    <Typography.Text strong>Matéria atual em andamento</Typography.Text>
+                  </Space>
 
-              {ongoingSubjects.length === 0 ? (
-                <Typography.Text type="secondary">Não há nenhuma matéria em andamento.</Typography.Text>
-              ) : (
-                <Space direction="vertical" size={10} style={{ width: '100%' }}>
-                  {ongoingSubjects.map((subject) => (
-                    <Card key={subject.id} size="small" style={{ borderColor: 'var(--ant-color-primary-border)' }}>
-                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                        <Space size={8} wrap>
-                          <Space size={6} align="center">
-                            <BookOutlined />
-                            <Typography.Text strong>{subject.name}</Typography.Text>
+                  {ongoingSubjects.length === 0 ? (
+                    <Typography.Text type="secondary">Não há nenhuma matéria em andamento.</Typography.Text>
+                  ) : (
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      {ongoingSubjects.map((subject) => (
+                        <Card key={subject.id} size="small" style={{ borderColor: 'var(--ant-color-primary-border)' }}>
+                          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                            <Space size={8} wrap>
+                              <Space size={6} align="center">
+                                <BookOutlined />
+                                <Typography.Text strong>{subject.name}</Typography.Text>
+                              </Space>
+                              <Tag color="blue">Em andamento</Tag>
+                            </Space>
+
+                            <Typography.Text type="secondary">
+                              <UserOutlined style={{ marginRight: 6 }} />
+                              Professor: {subject.teacherName}
+                            </Typography.Text>
+
+                            <Typography.Text type="secondary">
+                              <CalendarOutlined style={{ marginRight: 6 }} />
+                              Período: {toPeriodLabel(subject.initDate, subject.finishDate)}
+                            </Typography.Text>
+
+                            <Typography.Text type="secondary">
+                              <ClockCircleOutlined style={{ marginRight: 6 }} />
+                              Faltam {getRemainingDaysInPeriod(subject.initDate, subject.finishDate) ?? 0} dias para
+                              encerramento
+                            </Typography.Text>
                           </Space>
-                          <Tag color="blue">Em andamento</Tag>
-                        </Space>
+                        </Card>
+                      ))}
+                    </Space>
+                  )}
+                </>
+              ) : null}
 
-                        <Typography.Text type="secondary">
-                          <UserOutlined style={{ marginRight: 6 }} />
-                          Professor: {subject.teacherName}
-                        </Typography.Text>
-
-                        <Typography.Text type="secondary">
-                          <CalendarOutlined style={{ marginRight: 6 }} />
-                          Período: {toPeriodLabel(subject.initDate, subject.finishDate)}
-                        </Typography.Text>
-
-                        <Typography.Text type="secondary">
-                          <ClockCircleOutlined style={{ marginRight: 6 }} />
-                          Faltam {getRemainingDaysInPeriod(subject.initDate, subject.finishDate) ?? 0} dias para
-                          encerramento
-                        </Typography.Text>
-                      </Space>
-                    </Card>
-                  ))}
-                </Space>
-              )}
-
-              <Space size={6} align="center" style={{ marginTop: 8 }}>
-                <FileTextOutlined />
-                <Typography.Text strong>Justificativas pendentes</Typography.Text>
-              </Space>
-
-              {groupedPendingByStudent.length === 0 ? (
-                <Typography.Text type="secondary">Nenhuma justificativa pendente.</Typography.Text>
-              ) : (
-                <Collapse
-                  items={groupedPendingByStudent.map((student) => ({
+              {canManageJustifications ? (
+                groupedPendingByStudent.length === 0 ? (
+                  <>
+                    <Space size={6} align="center" style={{ marginTop: 8 }}>
+                      <FileTextOutlined />
+                      <Typography.Text strong>Justificativas pendentes</Typography.Text>
+                    </Space>
+                    <Typography.Text type="secondary">Nenhuma justificativa pendente.</Typography.Text>
+                  </>
+                ) : (
+                  <>
+                    <Space size={6} align="center" style={{ marginTop: 8 }}>
+                      <FileTextOutlined />
+                      <Typography.Text strong>Justificativas pendentes</Typography.Text>
+                    </Space>
+                    <Collapse
+                      items={groupedPendingByStudent.map((student) => ({
                     key: student.studentId,
                     label: (
                       <Space size={12} align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
@@ -485,7 +514,11 @@ export default function ClassManagementPage() {
                       />
                     ),
                   }))}
-                />
+                    />
+                  </>
+                )
+              ) : (
+                <Typography.Text type="secondary">Voce nao possui acesso aos detalhes operacionais desta turma.</Typography.Text>
               )}
             </Space>
           </Card>

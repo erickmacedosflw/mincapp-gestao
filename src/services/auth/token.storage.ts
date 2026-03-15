@@ -10,8 +10,14 @@ export function saveAuthSession(
   admin: AdminProfile,
   tenant: TenantId,
 ) {
+  const persistedAdmin: AdminProfile = {
+    id: admin.id,
+    name: admin.name,
+    email: admin.email,
+  }
+
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(ADMIN_KEY, JSON.stringify(admin));
+  localStorage.setItem(ADMIN_KEY, JSON.stringify(persistedAdmin));
   localStorage.setItem(TENANT_KEY, tenant);
 }
 

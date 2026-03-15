@@ -45,6 +45,8 @@ import {
 import type { MenuProps } from 'antd'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { ADMIN_PERMISSIONS } from '../../access/admin-access'
+import { useAdminAccess } from '../../access/use-admin-access'
 import type { StudentItem } from '../../types/student'
 import type { StudentsListResponse } from '../../types/student'
 import { getStudentById, getStudentsByClassId } from '../../services/student/student.service'
@@ -76,6 +78,8 @@ export default function StudentsPage() {
   const { classId } = useParams()
   const navigate = useNavigate()
   const screens = Grid.useBreakpoint()
+  const { hasPermission } = useAdminAccess()
+  const canViewDashboards = hasPermission(ADMIN_PERMISSIONS.visualizarDashboards)
   const listTopRef = useRef<HTMLDivElement | null>(null)
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<maptalks.Map | null>(null)
@@ -789,9 +793,11 @@ export default function StudentsPage() {
 
               <Typography.Text strong>Total de alunos: {total}</Typography.Text>
 
-              <Button icon={<BarChartOutlined />} onClick={() => navigate('/dashboard')} style={{ width: 'fit-content' }}>
-                Dashboard de alunos
-              </Button>
+              {canViewDashboards ? (
+                <Button icon={<BarChartOutlined />} onClick={() => navigate('/dashboard')} style={{ width: 'fit-content' }}>
+                  Dashboard de alunos
+                </Button>
+              ) : null}
             </Space>
           </Card>
         </Col>

@@ -81,9 +81,9 @@ export default function AppLayout() {
       : null,
     hasPermission(ADMIN_PERMISSIONS.gerenciarAdmins)
       ? {
-          key: '/admins/new',
+          key: '/admins',
           icon: <SafetyCertificateOutlined />,
-          label: <Link to="/admins/new">Novo Admin</Link>,
+          label: <Link to="/admins">Admins</Link>,
         }
       : null,
   ].filter(Boolean)
@@ -93,7 +93,7 @@ export default function AppLayout() {
     : location.pathname.startsWith('/dashboard')
       ? '/dashboard'
       : location.pathname.startsWith('/admins')
-        ? '/admins/new'
+        ? '/admins'
         : location.pathname.startsWith('/class')
           ? '/class'
           : ''

@@ -106,7 +106,7 @@ export default function ClassesPage() {
           ) : null}
         </div>
         <Typography.Text type="secondary">
-          Lista de turmas com período e status.
+          Lista de turmas com período, status e campus.
         </Typography.Text>
       </Space>
 

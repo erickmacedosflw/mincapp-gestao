@@ -1,4 +1,4 @@
-import { CalendarOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined } from '@ant-design/icons'
 import { Card, Space, Tag, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import type { ClassItem } from '../../types/class'
@@ -43,6 +43,14 @@ export default function ClassCard({
         <Space direction="vertical" size={0}>
           <Typography.Text strong>Período</Typography.Text>
           <Typography.Text type="secondary">{toPeriodLabel(data.initDate, data.finishDate)}</Typography.Text>
+        </Space>
+      </Space>
+
+      <Space size={8} align="start">
+        <EnvironmentOutlined style={{ marginTop: 2 }} />
+        <Space direction="vertical" size={0}>
+          <Typography.Text strong>Campus</Typography.Text>
+          <Typography.Text type="secondary">{data.campus?.name ?? 'Campus não informado'}</Typography.Text>
         </Space>
       </Space>
 

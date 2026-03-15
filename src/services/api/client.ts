@@ -7,6 +7,10 @@ if (!API_BASE_URL) {
   throw new Error('VITE_API_BASE_URL não foi configurada no ambiente.')
 }
 
+export function getApiBaseUrl() {
+  return API_BASE_URL
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,

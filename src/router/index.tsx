@@ -21,6 +21,7 @@ import InspireStudentsPage from "../pages/students/InspireStudentsPage";
 import StudentAcademicLifePage from "../pages/students/StudentAcademicLifePage";
 import DashboardPage from "../pages/dashboard/DashboardPage";
 import AdminCreatePage from "../pages/admins/AdminCreatePage";
+import AdminsPage from "../pages/admins/AdminsPage";
 import UnauthorizedPage from "../pages/access/UnauthorizedPage";
 
 export const appRouter = createBrowserRouter([
@@ -67,6 +68,14 @@ export const appRouter = createBrowserRouter([
             permissions={[ADMIN_PERMISSIONS.visualizarDashboards]}
           >
             <DashboardPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "admins",
+        element: (
+          <PermissionRoute permissions={[ADMIN_PERMISSIONS.gerenciarAdmins]}>
+            <AdminsPage />
           </PermissionRoute>
         ),
       },

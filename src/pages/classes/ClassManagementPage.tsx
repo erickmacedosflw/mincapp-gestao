@@ -9,6 +9,7 @@ import {
   PaperClipOutlined,
   TeamOutlined,
   UserOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
@@ -290,6 +291,14 @@ export default function ClassManagementPage() {
                   <Typography.Text type="secondary">
                     {toPeriodLabel(classData.initDate, classData.finishDate)}
                   </Typography.Text>
+                </Space>
+
+                <Space size={8} align="start">
+                  <EnvironmentOutlined style={{ marginTop: 3 }} />
+                  <Space direction="vertical" size={0}>
+                    <Typography.Text strong>Campus</Typography.Text>
+                    <Typography.Text type="secondary">{classData.campus?.name ?? 'Campus não informado'}</Typography.Text>
+                  </Space>
                 </Space>
 
                 {!finished ? (

@@ -66,7 +66,7 @@ export function getDefaultAuthorizedPath(
   }
 
   if (hasPermission(ADMIN_PERMISSIONS.gerenciarAdmins, admin)) {
-    return "/admins/new";
+    return "/admins";
   }
 
   return "/unauthorized";

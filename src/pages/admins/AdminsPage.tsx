@@ -29,21 +29,25 @@ import {
 } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  assignPermissionToAdmin,
   deleteAdmin,
   getAdminById,
   getAdmins,
+  getPermissionTypes,
   removeCampusFromAdmin,
+  removePermissionFromAdmin,
   addCampusToAdmin,
   updateAdmin,
 } from "../../services/admin/admin.service";
 import { getCampuses } from "../../services/campus/campus.service";
-import type { AdminItem } from "../../types/admin";
+import type { AdminItem, PermissionTypeItem } from "../../types/admin";
 import type { CampusItem } from "../../types/campus";
 
 type EditAdminFormValues = {
   name: string;
   email: string;
   isActive: boolean;
+  permissionIds: string[];
   campusIds: string[];
 };
 
@@ -66,10 +70,15 @@ function renderPermissions(admin: Pick<AdminItem, "permissions">) {
 export default function AdminsPage() {
   const navigate = useNavigate();
   const [form] = Form.useForm<EditAdminFormValues>();
+  const selectedPermissionIds = Form.useWatch("permissionIds", form) ?? [];
   const [admins, setAdmins] = useState<AdminItem[]>([]);
   const [campuses, setCampuses] = useState<CampusItem[]>([]);
+  const [permissionTypes, setPermissionTypes] = useState<PermissionTypeItem[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [campusesLoading, setCampusesLoading] = useState(true);
+  const [permissionTypesLoading, setPermissionTypesLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -78,6 +87,8 @@ export default function AdminsPage() {
   const [campusesErrorMessage, setCampusesErrorMessage] = useState<
     string | null
   >(null);
+  const [permissionTypesErrorMessage, setPermissionTypesErrorMessage] =
+    useState<string | null>(null);
   const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
   const [editingAdmin, setEditingAdmin] = useState<AdminItem | null>(null);
 
@@ -135,6 +146,31 @@ export default function AdminsPage() {
     loadCampusOptions();
   }, []);
 
+  useEffect(() => {
+    async function loadPermissionOptions() {
+      try {
+        setPermissionTypesLoading(true);
+        setPermissionTypesErrorMessage(null);
+        const data = await getPermissionTypes();
+        setPermissionTypes(
+          [...data].sort((firstItem, secondItem) =>
+            firstItem.name.localeCompare(secondItem.name, "pt-BR"),
+          ),
+        );
+      } catch (error) {
+        const nextMessage =
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar as permissões disponíveis.";
+        setPermissionTypesErrorMessage(nextMessage);
+      } finally {
+        setPermissionTypesLoading(false);
+      }
+    }
+
+    loadPermissionOptions();
+  }, []);
+
   const tableData = useMemo(
     () => admins.map((item) => ({ ...item, key: item.id })),
     [admins],
@@ -188,6 +224,7 @@ export default function AdminsPage() {
         name: admin.name,
         email: admin.email,
         isActive: admin.isActive,
+        permissionIds: admin.permissions.map((permission) => permission.id),
         campusIds: admin.campusIds ?? admin.campuses.map((campus) => campus.id),
       });
     } catch (error) {
@@ -228,11 +265,21 @@ export default function AdminsPage() {
     const currentCampusIds =
       editingAdmin.campusIds ??
       editingAdmin.campuses.map((campus) => campus.id);
+    const nextPermissionIds = values.permissionIds ?? [];
+    const currentPermissionIds = editingAdmin.permissions.map(
+      (permission) => permission.id,
+    );
     const campusIdsToAdd = nextCampusIds.filter(
       (campusId) => !currentCampusIds.includes(campusId),
     );
     const campusIdsToRemove = currentCampusIds.filter(
       (campusId) => !nextCampusIds.includes(campusId),
+    );
+    const permissionIdsToAdd = nextPermissionIds.filter(
+      (permissionId) => !currentPermissionIds.includes(permissionId),
+    );
+    const permissionIdsToRemove = currentPermissionIds.filter(
+      (permissionId) => !nextPermissionIds.includes(permissionId),
     );
 
     try {
@@ -245,6 +292,12 @@ export default function AdminsPage() {
       });
 
       await Promise.all([
+        ...permissionIdsToAdd.map((permissionId) =>
+          assignPermissionToAdmin(editingAdmin.id, permissionId),
+        ),
+        ...permissionIdsToRemove.map((permissionId) =>
+          removePermissionFromAdmin(editingAdmin.id, permissionId),
+        ),
         ...campusIdsToAdd.map((campusId) =>
           addCampusToAdmin(editingAdmin.id, campusId),
         ),
@@ -264,6 +317,9 @@ export default function AdminsPage() {
         name: refreshedAdmin.name,
         email: refreshedAdmin.email,
         isActive: refreshedAdmin.isActive,
+        permissionIds: refreshedAdmin.permissions.map(
+          (permission) => permission.id,
+        ),
         campusIds:
           refreshedAdmin.campusIds ??
           refreshedAdmin.campuses.map((campus) => campus.id),
@@ -447,6 +503,9 @@ export default function AdminsPage() {
           {campusesErrorMessage ? (
             <Alert type="error" showIcon message={campusesErrorMessage} />
           ) : null}
+          {permissionTypesErrorMessage ? (
+            <Alert type="error" showIcon message={permissionTypesErrorMessage} />
+          ) : null}
 
           {!editingAdmin ? (
             <Spin />
@@ -467,7 +526,11 @@ export default function AdminsPage() {
               <Form<EditAdminFormValues>
                 form={form}
                 layout="vertical"
-                initialValues={{ isActive: true, campusIds: [] }}
+                initialValues={{
+                  isActive: true,
+                  permissionIds: [],
+                  campusIds: [],
+                }}
                 onFinish={handleSaveEdit}
               >
                 <Form.Item
@@ -507,6 +570,44 @@ export default function AdminsPage() {
                   valuePropName="checked"
                 >
                   <Switch checkedChildren="Ativo" unCheckedChildren="Inativo" />
+                </Form.Item>
+
+                <Form.Item
+                  label="Permissões"
+                  name="permissionIds"
+                  extra="Selecione as permissões que esse admin poderá usar."
+                >
+                  <Space direction="vertical" size={8} style={{ width: "100%" }}>
+                    <Button
+                      onClick={() => {
+                        form.setFieldValue(
+                          "permissionIds",
+                          selectedPermissionIds.length === 0
+                            ? permissionTypes.map((permission) => permission.id)
+                            : [],
+                        );
+                      }}
+                      disabled={permissionTypesLoading || permissionTypes.length === 0}
+                    >
+                      {selectedPermissionIds.length === 0
+                        ? "Marcar todas as permissões"
+                        : "Limpar permissões"}
+                    </Button>
+
+                    <Select
+                      mode="multiple"
+                      allowClear
+                      value={selectedPermissionIds}
+                      onChange={(value) => form.setFieldValue("permissionIds", value)}
+                      loading={permissionTypesLoading}
+                      optionFilterProp="label"
+                      placeholder="Selecione uma ou mais permissões"
+                      options={permissionTypes.map((permission) => ({
+                        value: permission.id,
+                        label: permission.name,
+                      }))}
+                    />
+                  </Space>
                 </Form.Item>
 
                 <Form.Item

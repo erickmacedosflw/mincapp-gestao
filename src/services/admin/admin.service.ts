@@ -155,6 +155,26 @@ export async function assignPermissionToAdmin(
   }
 }
 
+export async function removePermissionFromAdmin(
+  adminId: string,
+  permissionTypeId: string,
+) {
+  try {
+    const response = await apiClient.delete<AdminItem>(
+      `/admin/${adminId}/permission/${permissionTypeId}`,
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(
+        error,
+        "Não foi possível remover a permissão do administrador.",
+      ),
+    );
+  }
+}
+
 export async function addCampusToAdmin(adminId: string, campusId: string) {
   try {
     const response = await apiClient.post<AdminItem>(

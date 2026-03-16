@@ -50,8 +50,15 @@ export type StudentDetailsResponse = StudentItem & {
   availableForSubscription: StudentAvailableClassItem[]
 }
 
+export type StudentListType = 'active_class' | 'ended_classes' | 'without_class'
+
 export type StudentsListResponse = {
   page: number
   total: number
+  summary: {
+    activeStudents: number
+    endedStudents: number
+    withoutClassStudents: number
+  }
   data: StudentItem[]
 }

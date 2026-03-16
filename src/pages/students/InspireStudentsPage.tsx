@@ -42,13 +42,13 @@ import {
 } from 'antd'
 import type { MenuProps } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { ADMIN_PERMISSIONS } from '../../access/admin-access'
 import { useAdminAccess } from '../../access/use-admin-access'
 import type { ClassItem } from '../../types/class'
 import type { ClassTypeItem } from '../../types/class-type'
-import type { StudentItem } from '../../types/student'
-import { getAllStudentsForDashboard, getStudentById } from '../../services/student/student.service'
+import type { StudentItem, StudentListType, StudentsListResponse } from '../../types/student'
+import { getStudentById, getStudentsByClassId } from '../../services/student/student.service'
 import { getClassTypes } from '../../services/class/class-type.service'
 import { addStudentToClass, removeStudentFromClass } from '../../services/class/class.service'
 import * as maptalks from 'maptalks'
@@ -58,7 +58,7 @@ import AppDialog from '../../components/feedback/AppDialog'
 
 const PER_PAGE = 15
 type MapCoordinates = [number, number]
-type EnrollmentStatusFilter = 'all' | 'active' | 'closed' | 'without-active'
+type EnrollmentStatusFilter = 'all' | StudentListType
 
 function formatCpf(value: string) {
   const digits = value.replace(/\D/g, '')
@@ -72,7 +72,6 @@ function formatCpf(value: string) {
 
 export default function InspireStudentsPage() {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const screens = Grid.useBreakpoint()
   const { hasPermission } = useAdminAccess()
   const canViewDashboards = hasPermission(ADMIN_PERMISSIONS.visualizarDashboards)
@@ -99,29 +98,18 @@ export default function InspireStudentsPage() {
 
   const normalizedSearch = useMemo(() => searchTerm.trim(), [searchTerm])
 
-  const studentsQuery = useQuery<StudentItem[]>({
-    queryKey: ['students-all-full'],
-    queryFn: getAllStudentsForDashboard,
-  })
+  const selectedStudentType = enrollmentStatusFilter === 'all' ? undefined : enrollmentStatusFilter
 
-  const allStudents = studentsQuery.data ?? []
-  const enrollmentQueryKey = ['students-enrollment-status', allStudents.map((student) => student.id).join(',')]
-
-  const studentsEnrollmentQuery = useQuery<Record<string, { activeCount: number; closedCount: number }>>({
-    queryKey: enrollmentQueryKey,
-    queryFn: async () => {
-      const details = await Promise.all(allStudents.map((student) => getStudentById(student.id)))
-
-      return details.reduce<Record<string, { activeCount: number; closedCount: number }>>((accumulator, current) => {
-        accumulator[current.id] = {
-          activeCount: current.subscriptions?.length ?? 0,
-          closedCount: current.previousSubscriptions?.length ?? 0,
-        }
-
-        return accumulator
-      }, {})
-    },
-    enabled: allStudents.length > 0,
+  const studentsQuery = useQuery<StudentsListResponse>({
+    queryKey: ['students', page, PER_PAGE, normalizedSearch, selectedStudentType],
+    queryFn: () =>
+      getStudentsByClassId({
+        page,
+        perPage: PER_PAGE,
+        search: normalizedSearch,
+        type: selectedStudentType,
+      }),
+    placeholderData: (previousData) => previousData,
   })
 
   const classTypesQuery = useQuery<ClassTypeItem[]>({
@@ -260,24 +248,7 @@ export default function InspireStudentsPage() {
         studentId: classesPreviewStudent.id,
       })
 
-      const refreshedDetails = await studentDetailsQuery.refetch()
-
-      queryClient.setQueryData<Record<string, { activeCount: number; closedCount: number }>>(
-        enrollmentQueryKey,
-        (previous) => {
-          if (!previous || !classesPreviewStudent) {
-            return previous
-          }
-
-          return {
-            ...previous,
-            [classesPreviewStudent.id]: {
-              activeCount: refreshedDetails.data?.subscriptions?.length ?? 0,
-              closedCount: refreshedDetails.data?.previousSubscriptions?.length ?? 0,
-            },
-          }
-        },
-      )
+      await Promise.all([studentDetailsQuery.refetch(), studentsQuery.refetch()])
 
       message.success('Aluno removido da turma com sucesso.')
       setRemoveClassTarget(null)
@@ -316,24 +287,7 @@ export default function InspireStudentsPage() {
         ),
       )
 
-      const refreshedDetails = await studentDetailsQuery.refetch()
-
-      queryClient.setQueryData<Record<string, { activeCount: number; closedCount: number }>>(
-        enrollmentQueryKey,
-        (previous) => {
-          if (!previous || !classesPreviewStudent) {
-            return previous
-          }
-
-          return {
-            ...previous,
-            [classesPreviewStudent.id]: {
-              activeCount: refreshedDetails.data?.subscriptions?.length ?? 0,
-              closedCount: refreshedDetails.data?.previousSubscriptions?.length ?? 0,
-            },
-          }
-        },
-      )
+      await Promise.all([studentDetailsQuery.refetch(), studentsQuery.refetch()])
 
       message.success(
         addClassConfirmTargets.length === 1
@@ -468,7 +422,7 @@ export default function InspireStudentsPage() {
     setShowClosedClasses(false)
   }, [classesPreviewStudent?.id])
 
-  if ((studentsQuery.isLoading && !studentsQuery.data) || (studentsEnrollmentQuery.isLoading && allStudents.length > 0)) {
+  if (studentsQuery.isLoading && !studentsQuery.data) {
     return (
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Card>
@@ -481,60 +435,21 @@ export default function InspireStudentsPage() {
     )
   }
 
-  if (studentsQuery.isError || studentsEnrollmentQuery.isError) {
+  if (studentsQuery.isError) {
     return <Alert type="error" showIcon message="Não foi possível carregar os alunos do sistema." />
   }
 
-  const students = studentsQuery.data ?? []
-  const enrollmentMap = studentsEnrollmentQuery.data ?? {}
-  const searchedStudents = students.filter((student) => {
-    if (!normalizedSearch) {
-      return true
-    }
-
-    const term = normalizedSearch.toLowerCase()
-
-    return [student.name, student.email, student.cpf]
-      .filter(Boolean)
-      .some((value) => value.toLowerCase().includes(term))
-  })
-  const activeStudentsCount = searchedStudents.filter((student) => (enrollmentMap[student.id]?.activeCount ?? 0) > 0).length
-  const closedStudentsCount = searchedStudents.filter((student) => (enrollmentMap[student.id]?.closedCount ?? 0) > 0).length
-  const studentsWithoutActiveClassCount = searchedStudents.filter((student) => {
-    const activeCount = enrollmentMap[student.id]?.activeCount ?? 0
-    const closedCount = enrollmentMap[student.id]?.closedCount ?? 0
-
-    return activeCount === 0 && closedCount === 0
-  }).length
-  const filteredStudents = searchedStudents.filter((student) => {
-    const hasActiveClass = (enrollmentMap[student.id]?.activeCount ?? 0) > 0
-    const hasClosedClass = (enrollmentMap[student.id]?.closedCount ?? 0) > 0
-
-    if (enrollmentStatusFilter === 'active') {
-      return hasActiveClass
-    }
-
-    if (enrollmentStatusFilter === 'closed') {
-      return hasClosedClass
-    }
-
-    if (enrollmentStatusFilter === 'without-active') {
-      return !hasActiveClass && !hasClosedClass
-    }
-
-    return true
-  })
-  const totalFilteredStudents = filteredStudents.length
-  const paginatedStudents = filteredStudents.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+  const students = studentsQuery.data?.data ?? []
+  const summary = studentsQuery.data?.summary ?? {
+    activeStudents: 0,
+    endedStudents: 0,
+    withoutClassStudents: 0,
+  }
+  const totalFilteredStudents = studentsQuery.data?.total ?? 0
+  const totalStudentsCount = summary.activeStudents + summary.endedStudents + summary.withoutClassStudents
   const isMobile = !screens.md
 
   const getStudentClassesCount = (student: StudentItem) => {
-    const enrollment = enrollmentMap[student.id]
-
-    if (enrollment) {
-      return enrollment.activeCount + enrollment.closedCount
-    }
-
     return student.classes?.length ?? 0
   }
 
@@ -719,7 +634,7 @@ export default function InspireStudentsPage() {
             </Typography.Title>
           </Space>
           <Typography.Text type="secondary">Listagem paginada de todos os alunos do sistema.</Typography.Text>
-          <Typography.Text strong>Total de alunos: {students.length}</Typography.Text>
+          <Typography.Text strong>Total de alunos: {totalStudentsCount}</Typography.Text>
           {canViewDashboards ? (
             <Button icon={<BarChartOutlined />} onClick={() => navigate('/dashboard')} style={{ width: 'fit-content' }}>
               Dashboard de alunos
@@ -733,7 +648,7 @@ export default function InspireStudentsPage() {
           <Input.Search
             value={searchInput}
             allowClear
-            placeholder="Buscar aluno por nome"
+            placeholder="Buscar aluno por nome, e-mail ou idade"
             onChange={(event) => setSearchInput(event.target.value)}
             onSearch={handleSearch}
           />
@@ -754,35 +669,35 @@ export default function InspireStudentsPage() {
                   label: (
                     <Space size={6}>
                       Todos
-                      <Badge count={searchedStudents.length} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
+                      <Badge count={totalStudentsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
                     </Space>
                   ),
                 },
                 {
-                  value: 'active',
+                  value: 'active_class',
                   label: (
                     <Space size={6}>
                       Em andamento
-                      <Badge count={activeStudentsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
+                      <Badge count={summary.activeStudents} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
                     </Space>
                   ),
                 },
                 {
-                  value: 'closed',
+                  value: 'ended_classes',
                   label: (
                     <Space size={6}>
                       Encerradas
-                      <Badge count={closedStudentsCount} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
+                      <Badge count={summary.endedStudents} showZero overflowCount={999999} style={{ backgroundColor: '#8C8C8C' }} />
                     </Space>
                   ),
                 },
                 {
-                  value: 'without-active',
+                  value: 'without_class',
                   label: (
                     <Space size={6}>
                       Sem turma
                       <Badge
-                        count={studentsWithoutActiveClassCount}
+                        count={summary.withoutClassStudents}
                         showZero
                         overflowCount={999999}
                         style={{ backgroundColor: '#8C8C8C' }}
@@ -805,7 +720,7 @@ export default function InspireStudentsPage() {
           {isMobile ? (
             <List
               itemLayout="horizontal"
-              dataSource={paginatedStudents}
+              dataSource={students}
               renderItem={(student) => {
                 const whatsAppUri = buildWhatsAppUri(student.phone)
 
@@ -860,7 +775,7 @@ export default function InspireStudentsPage() {
           ) : (
             <Table
               rowKey="id"
-              dataSource={paginatedStudents}
+              dataSource={students}
               columns={desktopColumns}
               pagination={false}
             />

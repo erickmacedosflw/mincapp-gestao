@@ -1,20 +1,22 @@
 import { apiClient } from '../api/client'
-import type { StudentDetailsResponse, StudentsListResponse } from '../../types/student'
+import type { StudentDetailsResponse, StudentsListResponse, StudentListType } from '../../types/student'
 
 type GetStudentsParams = {
   classId?: string
   page: number
   perPage: number
   search?: string
+  type?: StudentListType
 }
 
-export async function getStudentsByClassId({ classId, page, perPage, search }: GetStudentsParams) {
+export async function getStudentsByClassId({ classId, page, perPage, search, type }: GetStudentsParams) {
   const response = await apiClient.get<StudentsListResponse>('/student', {
     params: {
       page,
       perPage,
       classId: classId || undefined,
       search: search || undefined,
+      type: type || undefined,
     },
   })
 

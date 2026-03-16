@@ -98,7 +98,7 @@ export default function StudentsPage() {
   });
 
   const studentsQuery = useQuery<StudentsListResponse>({
-    queryKey: ["students", classId, page, normalizedSearch],
+    queryKey: ["students", "student-page", classId, page, normalizedSearch],
     queryFn: () =>
       getStudentsByClassId({
         classId: classId ?? "",

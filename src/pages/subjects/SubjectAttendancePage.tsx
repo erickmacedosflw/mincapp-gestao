@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import {
   ArrowLeftOutlined,
   CheckSquareOutlined,
@@ -30,7 +31,7 @@ import {
 } from "../../services/subject/subject.service";
 import type { ClassItem, ClassStudentAttendanceItem } from "../../types/class";
 import type {
-  SubjectAttendanceDateItem,
+  SubjectAttendanceMarkTypeItem,
   SubjectDetailsItem,
 } from "../../types/subject";
 import { parseDayMonthYear, toPeriodLabel } from "../../utils/date";
@@ -47,23 +48,90 @@ type AttendanceCellSnapshot = {
   markId: string | null;
 };
 
-type AttendanceDateMeta = {
-  date: string;
-  callTypeId: string | null;
+type AttendanceMarkTypeMeta = {
+  id: string;
+  description: string;
 };
 
-function getPresenceMarkType(attendance: SubjectAttendanceDateItem) {
-  return (
-    attendance.markTypes.find(
-      (item) => item.description.trim().toLowerCase() === "presença",
-    ) ??
-    attendance.markTypes.find((item) =>
-      item.description.trim().toLowerCase().includes("presença"),
-    ) ??
-    attendance.markTypes[0] ??
-    null
-  );
+type AttendanceDateMeta = {
+  date: string;
+  markTypes: AttendanceMarkTypeMeta[];
+};
+
+type AttendanceMarkCheckboxProps = {
+  cellKey: string;
+  description: string;
+  checked: boolean;
+  changed: boolean;
+  saving: boolean;
+  setPresenceMap: Dispatch<
+    SetStateAction<Record<string, AttendanceCellSnapshot>>
+  >;
+};
+
+function getCellKey(studentId: string, date: string, callTypeId: string) {
+  return `${studentId}::${date}::${callTypeId}`;
 }
+
+function toAttendanceMarkTypeMeta(
+  markType: SubjectAttendanceMarkTypeItem,
+): AttendanceMarkTypeMeta {
+  return {
+    id: markType.id,
+    description: markType.description,
+  };
+}
+
+const AttendanceMarkCheckbox = memo(function AttendanceMarkCheckbox({
+  cellKey,
+  description,
+  checked,
+  changed,
+  saving,
+  setPresenceMap,
+}: AttendanceMarkCheckboxProps) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        padding: 8,
+        borderRadius: 10,
+        backgroundColor: changed ? "#fff7e6" : "transparent",
+        border: changed ? "1px solid #ffd591" : "1px solid #f0f0f0",
+        transition: "all 0.2s ease",
+      }}
+    >
+      <Typography.Text
+        style={{
+          fontSize: 12,
+          lineHeight: 1.2,
+          textAlign: "center",
+        }}
+      >
+        {description}
+      </Typography.Text>
+      <Checkbox
+        checked={checked}
+        disabled={saving}
+        onChange={(event) => {
+          const nextChecked = event.target.checked;
+
+          setPresenceMap((current) => ({
+            ...current,
+            [cellKey]: {
+              checked: nextChecked,
+              markId: current[cellKey]?.markId ?? null,
+            },
+          }));
+        }}
+      />
+    </div>
+  );
+});
 
 export default function SubjectAttendancePage() {
   const navigate = useNavigate();
@@ -84,6 +152,7 @@ export default function SubjectAttendancePage() {
   const [presenceMap, setPresenceMap] = useState<
     Record<string, AttendanceCellSnapshot>
   >({});
+  const [showFloatingSave, setShowFloatingSave] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -123,38 +192,42 @@ export default function SubjectAttendancePage() {
             parseDayMonthYear(right.date).getTime(),
         );
 
-        const nextAttendanceDates = sortedAttendanceData.map((item) => {
-          const presenceMarkType = getPresenceMarkType(item);
-
-          return {
-            date: item.date,
-            callTypeId: presenceMarkType?.id ?? null,
-          };
-        });
+        const nextAttendanceDates = sortedAttendanceData.map((item) => ({
+          date: item.date,
+          markTypes: item.markTypes.map(toAttendanceMarkTypeMeta),
+        }));
 
         const nextPresenceMap: Record<string, AttendanceCellSnapshot> = {};
 
         sortedAttendanceData.forEach((item) => {
-          const presenceMarkType = getPresenceMarkType(item);
-
-          presenceMarkType?.marks.forEach((mark) => {
-            nextPresenceMap[`${mark.studentId}::${item.date}`] = {
-              checked: true,
-              markId: mark.id,
-            };
+          item.markTypes.forEach((markType) => {
+            markType.marks.forEach((mark) => {
+              nextPresenceMap[
+                getCellKey(mark.studentId, item.date, markType.id)
+              ] = {
+                checked: true,
+                markId: mark.id,
+              };
+            });
           });
         });
 
         safeClassStudents.forEach((student) => {
           nextAttendanceDates.forEach((attendanceDate) => {
-            const cellKey = `${student.id}::${attendanceDate.date}`;
+            attendanceDate.markTypes.forEach((markType) => {
+              const cellKey = getCellKey(
+                student.id,
+                attendanceDate.date,
+                markType.id,
+              );
 
-            if (!nextPresenceMap[cellKey]) {
-              nextPresenceMap[cellKey] = {
-                checked: false,
-                markId: null,
-              };
-            }
+              if (!nextPresenceMap[cellKey]) {
+                nextPresenceMap[cellKey] = {
+                  checked: false,
+                  markId: null,
+                };
+              }
+            });
           });
         });
 
@@ -177,13 +250,65 @@ export default function SubjectAttendancePage() {
     loadData();
   }, [classId, subjectId]);
 
+  useEffect(() => {
+    let frameId = 0;
+    const scrollContainer =
+      document.querySelector<HTMLElement>(".app-content") ?? window;
+
+    const updateFloatingSaveVisibility = () => {
+      const scrollTop =
+        scrollContainer instanceof Window
+          ? scrollContainer.scrollY
+          : scrollContainer.scrollTop;
+      const viewportHeight =
+        scrollContainer instanceof Window
+          ? scrollContainer.innerHeight
+          : scrollContainer.clientHeight;
+      const shouldShow = scrollTop > viewportHeight;
+
+      setShowFloatingSave((current) =>
+        current === shouldShow ? current : shouldShow,
+      );
+    };
+
+    const handleScroll = () => {
+      if (frameId) {
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        updateFloatingSaveVisibility();
+        frameId = 0;
+      });
+    };
+
+    updateFloatingSaveVisibility();
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      scrollContainer.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, []);
+
   const hasChanges = useMemo(
     () =>
       Object.keys(presenceMap).some((key) => {
-        const initialCell = initialPresenceMap[key];
-        const currentCell = presenceMap[key];
+        const initialCell = initialPresenceMap[key] ?? {
+          checked: false,
+          markId: null,
+        };
+        const currentCell = presenceMap[key] ?? {
+          checked: false,
+          markId: null,
+        };
 
-        return initialCell?.checked !== currentCell?.checked;
+        return initialCell.checked !== currentCell.checked;
       }),
     [initialPresenceMap, presenceMap],
   );
@@ -224,41 +349,52 @@ export default function SubjectAttendancePage() {
       width: 120,
       align: "center" as const,
       render: (_value: unknown, record: AttendanceMatrixRow) => {
-        const cellKey = `${record.studentId}::${attendanceDate.date}`;
-        const cell = presenceMap[cellKey] ?? { checked: false, markId: null };
-        const initialCell = initialPresenceMap[cellKey] ?? { checked: false, markId: null };
-        const changed = initialCell.checked !== cell.checked;
+        const hasMarkTypes = attendanceDate.markTypes.length > 0;
 
         return (
           <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minWidth: 44,
-              minHeight: 44,
-              padding: 6,
-              borderRadius: 10,
-              backgroundColor: changed ? "#fff7e6" : "transparent",
-              border: changed ? "1px solid #ffd591" : "1px solid transparent",
-              transition: "all 0.2s ease",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "stretch",
+              gap: 8,
+              minWidth: 110,
             }}
           >
-            <Checkbox
-              checked={cell.checked}
-              disabled={!attendanceDate.callTypeId || saving}
-              onChange={(event) => {
-                const nextChecked = event.target.checked;
+            {hasMarkTypes ? (
+              attendanceDate.markTypes.map((markType) => {
+                const cellKey = getCellKey(
+                  record.studentId,
+                  attendanceDate.date,
+                  markType.id,
+                );
+                const cell = presenceMap[cellKey] ?? {
+                  checked: false,
+                  markId: null,
+                };
+                const initialCell = initialPresenceMap[cellKey] ?? {
+                  checked: false,
+                  markId: null,
+                };
+                const changed = initialCell.checked !== cell.checked;
 
-                setPresenceMap((current) => ({
-                  ...current,
-                  [cellKey]: {
-                    checked: nextChecked,
-                    markId: current[cellKey]?.markId ?? null,
-                  },
-                }));
-              }}
-            />
+                return (
+                  <AttendanceMarkCheckbox
+                    key={markType.id}
+                    cellKey={cellKey}
+                    description={markType.description}
+                    checked={cell.checked}
+                    changed={changed}
+                    saving={saving}
+                    setPresenceMap={setPresenceMap}
+                  />
+                );
+              })
+            ) : (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Sem marcações
+              </Typography.Text>
+            )}
           </div>
         );
       },
@@ -275,41 +411,45 @@ export default function SubjectAttendancePage() {
     const payload = attendanceDates.reduce(
       (accumulator, attendanceDate) => {
         rows.forEach((student) => {
-          const cellKey = `${student.studentId}::${attendanceDate.date}`;
-          const initialCell = initialPresenceMap[cellKey] ?? {
-            checked: false,
-            markId: null,
-          };
-          const currentCell = presenceMap[cellKey] ?? {
-            checked: false,
-            markId: null,
-          };
+          attendanceDate.markTypes.forEach((markType) => {
+            const cellKey = getCellKey(
+              student.studentId,
+              attendanceDate.date,
+              markType.id,
+            );
+            const initialCell = initialPresenceMap[cellKey] ?? {
+              checked: false,
+              markId: null,
+            };
+            const currentCell = presenceMap[cellKey] ?? {
+              checked: false,
+              markId: null,
+            };
 
-          if (initialCell.checked === currentCell.checked) {
-            return;
-          }
-
-          if (currentCell.checked && !initialCell.checked) {
-            if (attendanceDate.callTypeId) {
-              accumulator.check.push({
-                studentId: student.studentId,
-                callTypeId: attendanceDate.callTypeId,
-                date: attendanceDate.date,
-              });
+            if (initialCell.checked === currentCell.checked) {
+              return;
             }
 
-            return;
-          }
+            if (currentCell.checked && !initialCell.checked) {
+              accumulator.check.push({
+                studentId: student.studentId,
+                callTypeId: markType.id,
+                date: attendanceDate.date,
+              });
 
-          if (
-            !currentCell.checked &&
-            initialCell.checked &&
-            initialCell.markId
-          ) {
-            accumulator.uncheck.push({
-              id: initialCell.markId,
-            });
-          }
+              return;
+            }
+
+            if (
+              !currentCell.checked &&
+              initialCell.checked &&
+              initialCell.markId
+            ) {
+              accumulator.uncheck.push({
+                id: initialCell.markId,
+              });
+            }
+          });
         });
 
         return accumulator;
@@ -328,7 +468,7 @@ export default function SubjectAttendancePage() {
       setSaving(true);
       await updateSubjectAttendanceMarks(payload);
       message.success("Marcações de presença salvas com sucesso.");
-      navigate(classId ? `/class/${classId}` : "/class");
+      navigate(classId ? `/class/${classId}/subjects` : "/class");
     } catch {
       message.error("Não foi possível salvar as marcações de presença.");
     } finally {
@@ -360,7 +500,14 @@ export default function SubjectAttendancePage() {
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space
+      direction="vertical"
+      size={16}
+      style={{
+        width: "100%",
+        paddingBottom: hasChanges && showFloatingSave ? 88 : 0,
+      }}
+    >
       <Breadcrumb
         items={[
           { title: <Link to="/class">Turmas</Link> },
@@ -437,19 +584,47 @@ export default function SubjectAttendancePage() {
         ) : attendanceDates.length === 0 ? (
           <Empty description="Nenhuma data de chamada encontrada para esta matéria." />
         ) : (
-          <div style={{ width: "100%", overflowX: "auto" }}>
+          <div
+            style={{
+              width: "100%",
+              overflowX: "auto",
+              overflowY: "visible",
+            }}
+          >
             <Table
+              className="attendance-marks-table"
               rowKey="studentId"
               columns={columns}
               dataSource={rows}
               pagination={false}
               scroll={{ x: "max-content" }}
               bordered
-              sticky
             />
           </div>
         )}
       </Card>
+
+      {hasChanges && showFloatingSave ? (
+        <Button
+          type="primary"
+          size="large"
+          icon={<SaveOutlined />}
+          onClick={handleSave}
+          loading={saving}
+          style={{
+            position: "fixed",
+            right: 24,
+            bottom: 24,
+            zIndex: 30,
+            height: 52,
+            paddingInline: 20,
+            borderRadius: 999,
+            boxShadow: "0 18px 40px rgba(24, 144, 255, 0.28)",
+          }}
+        >
+          Salvar alterações
+        </Button>
+      ) : null}
     </Space>
   );
 }

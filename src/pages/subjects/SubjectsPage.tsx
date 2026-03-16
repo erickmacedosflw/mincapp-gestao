@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOutlined,
   CalendarOutlined,
   CheckSquareOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
   EditOutlined,
   FilterOutlined,
   PlusOutlined,
   UserOutlined,
-} from '@ant-design/icons'
+} from "@ant-design/icons";
 import {
   Alert,
   Breadcrumb,
@@ -18,109 +19,164 @@ import {
   Empty,
   Grid,
   List,
+  message,
   Radio,
   Row,
   Skeleton,
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
-} from 'antd'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ADMIN_PERMISSIONS } from '../../access/admin-access'
-import { useAdminAccess } from '../../access/use-admin-access'
-import type { SubjectItem } from '../../types/subject'
-import type { ClassItem } from '../../types/class'
-import { getSubjectsByClassId } from '../../services/subject/subject.service'
-import { getClassById } from '../../services/class/class.service'
-import { getDaysUntilClassEnd, getPeriodStatus, getRemainingDaysInPeriod, isClassFinished, toPeriodLabel } from '../../utils/date'
+} from "antd";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import AppDialog from "../../components/feedback/AppDialog";
+import { ADMIN_PERMISSIONS } from "../../access/admin-access";
+import { useAdminAccess } from "../../access/use-admin-access";
+import type { SubjectItem } from "../../types/subject";
+import type { ClassItem } from "../../types/class";
+import {
+  deleteSubject,
+  getSubjectsByClassId,
+} from "../../services/subject/subject.service";
+import { getClassById } from "../../services/class/class.service";
+import {
+  getDaysUntilClassEnd,
+  getPeriodStatus,
+  getRemainingDaysInPeriod,
+  isClassFinished,
+  toPeriodLabel,
+} from "../../utils/date";
 
-type SubjectFilter = 'all' | 'ongoing' | 'closed' | 'not_started'
+type SubjectFilter = "all" | "ongoing" | "closed" | "not_started";
 
 export default function SubjectsPage() {
-  const { classId } = useParams()
-  const navigate = useNavigate()
-  const screens = Grid.useBreakpoint()
-  const { hasPermission } = useAdminAccess()
-  const canManageSubjects = hasPermission(ADMIN_PERMISSIONS.gerenciarMaterias)
-  const canManageAttendance = hasPermission(ADMIN_PERMISSIONS.gerenciarPresencas)
+  const { classId } = useParams();
+  const navigate = useNavigate();
+  const screens = Grid.useBreakpoint();
+  const { hasPermission } = useAdminAccess();
+  const canManageSubjects = hasPermission(ADMIN_PERMISSIONS.gerenciarMaterias);
+  const canManageAttendance = hasPermission(
+    ADMIN_PERMISSIONS.gerenciarPresencas,
+  );
 
-  const [subjects, setSubjects] = useState<SubjectItem[]>([])
-  const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [filter, setFilter] = useState<SubjectFilter>('all')
+  const [subjects, setSubjects] = useState<SubjectItem[]>([]);
+  const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [filter, setFilter] = useState<SubjectFilter>("all");
+  const [subjectPendingDelete, setSubjectPendingDelete] =
+    useState<SubjectItem | null>(null);
+  const [deletingSubject, setDeletingSubject] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       if (!classId) {
-        setErrorMessage('Turma não informada.')
-        setLoading(false)
-        return
+        setErrorMessage("Turma não informada.");
+        setLoading(false);
+        return;
       }
 
       try {
-        setLoading(true)
-        setErrorMessage(null)
+        setLoading(true);
+        setErrorMessage(null);
 
-        const [classData, subjectData] = await Promise.all([getClassById(classId), getSubjectsByClassId(classId)])
+        const [classData, subjectData] = await Promise.all([
+          getClassById(classId),
+          getSubjectsByClassId(classId),
+        ]);
 
         if (!classData) {
-          setErrorMessage('Turma não encontrada.')
-          return
+          setErrorMessage("Turma não encontrada.");
+          return;
         }
 
-        setSelectedClass(classData)
-        setSubjects(subjectData)
+        setSelectedClass(classData);
+        setSubjects(subjectData);
       } catch {
-        setErrorMessage('Não foi possível carregar as matérias da turma.')
+        setErrorMessage("Não foi possível carregar as matérias da turma.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    loadData()
-  }, [classId])
+    loadData();
+  }, [classId]);
 
   const filteredSubjects = useMemo(() => {
-    if (filter === 'all') {
-      return subjects
+    if (filter === "all") {
+      return subjects;
     }
 
-    return subjects.filter((item) => getPeriodStatus(item.initDate, item.finishDate) === filter)
-  }, [subjects, filter])
+    return subjects.filter(
+      (item) => getPeriodStatus(item.initDate, item.finishDate) === filter,
+    );
+  }, [subjects, filter]);
 
-  const isMobile = !screens.md
+  const isMobile = !screens.md;
 
   const statusLabelByKey = {
-    ongoing: 'Em andamento',
-    closed: 'Encerrada',
-    not_started: 'Não iniciado',
-  }
+    ongoing: "Em andamento",
+    closed: "Encerrada",
+    not_started: "Não iniciado",
+  };
 
   const statusColorByKey = {
-    ongoing: 'blue',
-    closed: 'default',
-    not_started: 'gold',
-  } as const
+    ongoing: "blue",
+    closed: "default",
+    not_started: "gold",
+  } as const;
+
+  const handleConfirmDelete = async () => {
+    if (!subjectPendingDelete) {
+      return;
+    }
+
+    try {
+      setDeletingSubject(true);
+      await deleteSubject(subjectPendingDelete.id);
+
+      if (classId) {
+        const updatedSubjects = await getSubjectsByClassId(classId);
+        setSubjects(updatedSubjects);
+      } else {
+        setSubjects((previous) =>
+          previous.filter((item) => item.id !== subjectPendingDelete.id),
+        );
+      }
+
+      setSubjectPendingDelete(null);
+      message.success("Matéria excluída com sucesso.");
+    } catch (error) {
+      const nextMessage =
+        error instanceof Error
+          ? error.message
+          : "Não foi possível excluir a matéria.";
+      message.error(nextMessage);
+    } finally {
+      setDeletingSubject(false);
+    }
+  };
 
   const tableColumns = [
     {
-      title: 'Matéria',
-      key: 'name',
+      title: "Matéria",
+      key: "name",
       render: (_: unknown, item: SubjectItem) => {
-        const status = getPeriodStatus(item.initDate, item.finishDate)
+        const status = getPeriodStatus(item.initDate, item.finishDate);
         return (
           <Space size={8} wrap>
             <Typography.Text strong>{item.name}</Typography.Text>
-            <Tag color={statusColorByKey[status]}>{statusLabelByKey[status]}</Tag>
+            <Tag color={statusColorByKey[status]}>
+              {statusLabelByKey[status]}
+            </Tag>
           </Space>
-        )
+        );
       },
     },
     {
-      title: 'Professor',
-      key: 'teacher',
+      title: "Professor",
+      key: "teacher",
       render: (_: unknown, item: SubjectItem) => (
         <Typography.Text type="secondary">
           <UserOutlined style={{ marginRight: 6 }} />
@@ -129,8 +185,8 @@ export default function SubjectsPage() {
       ),
     },
     {
-      title: 'Período',
-      key: 'period',
+      title: "Período",
+      key: "period",
       render: (_: unknown, item: SubjectItem) => (
         <Typography.Text type="secondary">
           <CalendarOutlined style={{ marginRight: 6 }} />
@@ -139,53 +195,59 @@ export default function SubjectsPage() {
       ),
     },
     {
-      title: 'Prazo',
-      key: 'remaining',
-      width: 220,
-      render: (_: unknown, item: SubjectItem) => {
-        const status = getPeriodStatus(item.initDate, item.finishDate)
-        const remainingDays = getRemainingDaysInPeriod(item.initDate, item.finishDate)
-
-        return (
-          <Typography.Text type="secondary">
-            <ClockCircleOutlined style={{ marginRight: 6 }} />
-            {status === 'ongoing'
-              ? `Faltam ${remainingDays} dias`
-              : status === 'not_started'
-                ? 'Não iniciado'
-                : 'Encerrada'}
-          </Typography.Text>
-        )
-      },
-    },
-    {
-      title: 'Ações',
-      key: 'actions',
-      width: 260,
+      title: "Ações",
+      key: "actions",
+      width: 160,
       render: (_: unknown, item: SubjectItem) => (
         <Space size={8} wrap>
           {canManageAttendance ? (
-            <Button
-              size="small"
-              icon={<CheckSquareOutlined />}
-              onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
-            >
-              Marcações de Presença
-            </Button>
+            <Tooltip title="Marcações de Presença">
+              <Button
+                size="small"
+                shape="circle"
+                icon={<CheckSquareOutlined />}
+                aria-label="Marcações de Presença"
+                onClick={() =>
+                  navigate(
+                    `/class/${item.classId}/subjects/${item.id}/attendance`,
+                  )
+                }
+              />
+            </Tooltip>
           ) : null}
           {canManageSubjects ? (
-            <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}>
-              Editar
-            </Button>
+            <Tooltip title="Editar">
+              <Button
+                size="small"
+                shape="circle"
+                icon={<EditOutlined />}
+                aria-label="Editar"
+                onClick={() =>
+                  navigate(`/class/${item.classId}/subjects/${item.id}/edit`)
+                }
+              />
+            </Tooltip>
+          ) : null}
+          {canManageSubjects ? (
+            <Tooltip title="Excluir">
+              <Button
+                danger
+                size="small"
+                shape="circle"
+                icon={<DeleteOutlined />}
+                aria-label="Excluir"
+                onClick={() => setSubjectPendingDelete(item)}
+              />
+            </Tooltip>
           ) : null}
         </Space>
       ),
     },
-  ]
+  ];
 
   if (loading) {
     return (
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
         <Card>
           <Skeleton active paragraph={{ rows: 3 }} />
         </Card>
@@ -193,63 +255,88 @@ export default function SubjectsPage() {
           <Skeleton active paragraph={{ rows: 6 }} />
         </Card>
       </Space>
-    )
+    );
   }
 
   if (errorMessage) {
-    return <Alert type="error" showIcon message={errorMessage} />
+    return <Alert type="error" showIcon message={errorMessage} />;
   }
 
   if (!selectedClass) {
-    return <Empty description="Turma não encontrada." />
+    return <Empty description="Turma não encontrada." />;
   }
 
-  const classFinished = isClassFinished(selectedClass.finishDate)
-  const classRemainingDays = getDaysUntilClassEnd(selectedClass.finishDate)
+  const classFinished = isClassFinished(selectedClass.finishDate);
+  const classRemainingDays = getDaysUntilClassEnd(selectedClass.finishDate);
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+    <Space direction="vertical" size={16} style={{ width: "100%" }}>
       <Breadcrumb
         items={[
           { title: <Link to="/class">Turmas</Link> },
-          { title: <Link to={`/class/${selectedClass.id}`}>Gestão da turma</Link> },
-          { title: 'Matérias' },
+          {
+            title: (
+              <Link to={`/class/${selectedClass.id}`}>Gestão da turma</Link>
+            ),
+          },
+          { title: "Matérias" },
         ]}
       />
 
       <Row gutter={[16, 16]} align="top">
         <Col xs={24} lg={6}>
           <Card>
-            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+            <Space direction="vertical" size={8} style={{ width: "100%" }}>
               <Typography.Title level={4} style={{ margin: 0 }}>
                 {selectedClass.name}
               </Typography.Title>
 
               <Space size={6} wrap>
-                <Tag color={classFinished ? 'default' : 'blue'}>{classFinished ? 'Encerrada' : 'Em andamento'}</Tag>
+                <Tag color={classFinished ? "default" : "blue"}>
+                  {classFinished ? "Encerrada" : "Em andamento"}
+                </Tag>
               </Space>
 
               <Space size={8}>
                 <ClockCircleOutlined />
-                <Typography.Text type="secondary">{toPeriodLabel(selectedClass.initDate, selectedClass.finishDate)}</Typography.Text>
+                <Typography.Text type="secondary">
+                  {toPeriodLabel(
+                    selectedClass.initDate,
+                    selectedClass.finishDate,
+                  )}
+                </Typography.Text>
               </Space>
 
               {!classFinished ? (
                 <Typography.Text type="secondary">
-                  Faltam <Typography.Text strong>{classRemainingDays} dias</Typography.Text> para encerramento
+                  Faltam{" "}
+                  <Typography.Text strong>
+                    {classRemainingDays} dias
+                  </Typography.Text>{" "}
+                  para encerramento
                 </Typography.Text>
               ) : null}
 
-              <Typography.Text strong>Total de matérias: {subjects.length}</Typography.Text>
+              <Typography.Text strong>
+                Total de matérias: {subjects.length}
+              </Typography.Text>
             </Space>
           </Card>
         </Col>
 
         <Col xs={24} lg={18}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Space direction="vertical" size={16} style={{ width: "100%" }}>
             <Card>
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+              <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                <div
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 16,
+                  }}
+                >
                   <Space size={8} align="center">
                     <BookOutlined style={{ fontSize: 22 }} />
                     <Typography.Title level={4} style={{ margin: 0 }}>
@@ -257,7 +344,13 @@ export default function SubjectsPage() {
                     </Typography.Title>
                   </Space>
                   {canManageSubjects ? (
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate(`/class/${selectedClass.id}/subjects/new`)}>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() =>
+                        navigate(`/class/${selectedClass.id}/subjects/new`)
+                      }
+                    >
                       Nova matéria
                     </Button>
                   ) : null}
@@ -271,10 +364,10 @@ export default function SubjectsPage() {
                     value={filter}
                     onChange={(event) => setFilter(event.target.value)}
                     options={[
-                      { label: 'Todas', value: 'all' },
-                      { label: 'Em andamento', value: 'ongoing' },
-                      { label: 'Encerradas', value: 'closed' },
-                      { label: 'Não iniciado', value: 'not_started' },
+                      { label: "Todas", value: "all" },
+                      { label: "Em andamento", value: "ongoing" },
+                      { label: "Encerradas", value: "closed" },
+                      { label: "Não iniciado", value: "not_started" },
                     ]}
                   />
                 </Space>
@@ -290,8 +383,14 @@ export default function SubjectsPage() {
                     itemLayout="horizontal"
                     dataSource={filteredSubjects}
                     renderItem={(item) => {
-                      const status = getPeriodStatus(item.initDate, item.finishDate)
-                      const remainingDays = getRemainingDaysInPeriod(item.initDate, item.finishDate)
+                      const status = getPeriodStatus(
+                        item.initDate,
+                        item.finishDate,
+                      );
+                      const remainingDays = getRemainingDaysInPeriod(
+                        item.initDate,
+                        item.finishDate,
+                      );
 
                       return (
                         <List.Item
@@ -301,7 +400,11 @@ export default function SubjectsPage() {
                                 key={`attendance-${item.id}`}
                                 size="small"
                                 icon={<CheckSquareOutlined />}
-                                onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/attendance`)}
+                                onClick={() =>
+                                  navigate(
+                                    `/class/${item.classId}/subjects/${item.id}/attendance`,
+                                  )
+                                }
                               >
                                 Presença
                               </Button>
@@ -311,9 +414,24 @@ export default function SubjectsPage() {
                                 key={`edit-${item.id}`}
                                 size="small"
                                 icon={<EditOutlined />}
-                                onClick={() => navigate(`/class/${item.classId}/subjects/${item.id}/edit`)}
+                                onClick={() =>
+                                  navigate(
+                                    `/class/${item.classId}/subjects/${item.id}/edit`,
+                                  )
+                                }
                               >
                                 Editar
+                              </Button>
+                            ) : null,
+                            canManageSubjects ? (
+                              <Button
+                                key={`delete-${item.id}`}
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                onClick={() => setSubjectPendingDelete(item)}
+                              >
+                                Excluir
                               </Button>
                             ) : null,
                           ].filter(Boolean)}
@@ -321,8 +439,12 @@ export default function SubjectsPage() {
                           <List.Item.Meta
                             title={
                               <Space size={8} wrap>
-                                <Typography.Text strong>{item.name}</Typography.Text>
-                                <Tag color={statusColorByKey[status]}>{statusLabelByKey[status]}</Tag>
+                                <Typography.Text strong>
+                                  {item.name}
+                                </Typography.Text>
+                                <Tag color={statusColorByKey[status]}>
+                                  {statusLabelByKey[status]}
+                                </Tag>
                               </Space>
                             }
                             description={
@@ -333,33 +455,62 @@ export default function SubjectsPage() {
                                 </Typography.Text>
 
                                 <Typography.Text type="secondary">
-                                  <CalendarOutlined style={{ marginRight: 6 }} />
-                                  Período: {toPeriodLabel(item.initDate, item.finishDate)}
+                                  <CalendarOutlined
+                                    style={{ marginRight: 6 }}
+                                  />
+                                  Período:{" "}
+                                  {toPeriodLabel(
+                                    item.initDate,
+                                    item.finishDate,
+                                  )}
                                 </Typography.Text>
 
                                 <Typography.Text type="secondary">
-                                  <ClockCircleOutlined style={{ marginRight: 6 }} />
-                                  {status === 'ongoing'
+                                  <ClockCircleOutlined
+                                    style={{ marginRight: 6 }}
+                                  />
+                                  {status === "ongoing"
                                     ? `Faltam ${remainingDays} dias para encerramento`
-                                    : status === 'not_started'
-                                      ? 'Não iniciado'
-                                      : 'Encerrada'}
+                                    : status === "not_started"
+                                      ? "Não iniciado"
+                                      : "Encerrada"}
                                 </Typography.Text>
                               </Space>
                             }
                           />
                         </List.Item>
-                      )
+                      );
                     }}
                   />
                 ) : (
-                  <Table rowKey="id" columns={tableColumns} dataSource={filteredSubjects} pagination={false} />
+                  <Table
+                    rowKey="id"
+                    columns={tableColumns}
+                    dataSource={filteredSubjects}
+                    pagination={false}
+                  />
                 )}
               </Card>
             )}
           </Space>
         </Col>
       </Row>
+
+      <AppDialog
+        open={Boolean(subjectPendingDelete)}
+        type="danger"
+        title="Excluir matéria"
+        message={
+          subjectPendingDelete
+            ? `Deseja realmente excluir a matéria "${subjectPendingDelete.name}"?`
+            : "Deseja realmente excluir esta matéria?"
+        }
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmLoading={deletingSubject}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setSubjectPendingDelete(null)}
+      />
     </Space>
-  )
+  );
 }

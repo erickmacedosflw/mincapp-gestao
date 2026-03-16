@@ -25,6 +25,7 @@ export default function ClassCard({
 }: ClassCardProps) {
   const finished = isClassFinished(data.finishDate)
   const remainingDays = getDaysUntilClassEnd(data.finishDate)
+  const resolvedClassTypeName = classTypeName ?? data.classType?.name ?? 'Sem tipo'
 
   const content = (
     <Space direction="vertical" size={compact ? 8 : 10} style={{ width: '100%' }}>
@@ -33,7 +34,7 @@ export default function ClassCard({
           {data.name}
         </Typography.Title>
         <Space size={6} wrap>
-          <Tag>{classTypeName ?? 'Sem tipo'}</Tag>
+          <Tag>{resolvedClassTypeName}</Tag>
           {showStatusTag ? <Tag color={finished ? 'default' : 'blue'}>{finished ? 'Encerrada' : 'Em andamento'}</Tag> : null}
         </Space>
       </Space>
@@ -53,6 +54,16 @@ export default function ClassCard({
           <Typography.Text type="secondary">{data.campus?.name ?? 'Campus não informado'}</Typography.Text>
         </Space>
       </Space>
+
+      {data.subscriptionEndDate ? (
+        <Space size={8} align="start">
+          <CalendarOutlined style={{ marginTop: 2 }} />
+          <Space direction="vertical" size={0}>
+            <Typography.Text strong>Inscrições até</Typography.Text>
+            <Typography.Text type="secondary">{data.subscriptionEndDate}</Typography.Text>
+          </Space>
+        </Space>
+      ) : null}
 
       {showRemainingDays && !finished ? (
         <Space size={8}>

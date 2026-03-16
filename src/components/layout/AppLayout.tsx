@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Layout, Menu, Space, Typography } from 'antd'
 import {
+  AppstoreOutlined,
   BarChartOutlined,
   LogoutOutlined,
   ReadOutlined,
@@ -65,6 +66,13 @@ export default function AppLayout() {
           label: <Link to="/class">Turmas</Link>,
         }
       : null,
+    hasPermission(ADMIN_PERMISSIONS.gerenciarTiposTurma)
+      ? {
+          key: '/class-types',
+          icon: <AppstoreOutlined />,
+          label: <Link to="/class-types">Tipos de turma</Link>,
+        }
+      : null,
     hasPermission(ADMIN_PERMISSIONS.gerenciarAlunos)
       ? {
           key: '/students',
@@ -94,6 +102,8 @@ export default function AppLayout() {
       ? '/dashboard'
       : location.pathname.startsWith('/admins')
         ? '/admins'
+        : location.pathname.startsWith('/class-types')
+          ? '/class-types'
         : location.pathname.startsWith('/class')
           ? '/class'
           : ''

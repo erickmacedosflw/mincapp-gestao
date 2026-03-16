@@ -145,6 +145,10 @@ export default function StudentsPage() {
     return new Map(entries.map((item) => [item.id, item.name]))
   }, [classTypesQuery.data])
 
+  const getClassTypeName = useCallback((classTypeId?: string | null) => {
+    return classTypeId ? classTypeNameMap.get(classTypeId) : undefined
+  }, [classTypeNameMap])
+
   const activeClasses = useMemo<ClassItem[]>(() => {
     const subscriptions = studentDetailsQuery.data?.subscriptions ?? []
 
@@ -194,13 +198,13 @@ export default function StudentsPage() {
     const groupedMap = new Map<string, ClassItem[]>()
 
     availableClassesForAdd.forEach((item) => {
-      const typeName = classTypeNameMap.get(item.classTypeId) ?? 'Sem tipo'
+      const typeName = getClassTypeName(item.classTypeId) ?? 'Sem tipo'
       const current = groupedMap.get(typeName) ?? []
       groupedMap.set(typeName, [...current, item])
     })
 
     return Array.from(groupedMap.entries()).map(([typeName, items]) => ({ typeName, items }))
-  }, [availableClassesForAdd, classTypeNameMap])
+  }, [availableClassesForAdd, getClassTypeName])
 
   const availableClassesForTransfer = useMemo<ClassItem[]>(() => {
     return (transferClassesQuery.data ?? []).filter((item) => item.id !== classId)
@@ -210,13 +214,13 @@ export default function StudentsPage() {
     const groupedMap = new Map<string, ClassItem[]>()
 
     availableClassesForTransfer.forEach((item) => {
-      const typeName = classTypeNameMap.get(item.classTypeId) ?? 'Sem tipo'
+      const typeName = getClassTypeName(item.classTypeId) ?? 'Sem tipo'
       const current = groupedMap.get(typeName) ?? []
       groupedMap.set(typeName, [...current, item])
     })
 
     return Array.from(groupedMap.entries()).map(([typeName, items]) => ({ typeName, items }))
-  }, [availableClassesForTransfer, classTypeNameMap])
+  }, [availableClassesForTransfer, getClassTypeName])
 
   const closeTransferModal = () => {
     if (transferringStudent) {
@@ -1012,7 +1016,7 @@ export default function StudentsPage() {
                     <ClassCard
                       key={classItem.id}
                       data={classItem}
-                      classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                      classTypeName={getClassTypeName(classItem.classTypeId)}
                       compact
                       showStatusTag={false}
                       headerExtra={
@@ -1059,7 +1063,7 @@ export default function StudentsPage() {
                     <ClassCard
                       key={classItem.id}
                       data={classItem}
-                      classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                      classTypeName={getClassTypeName(classItem.classTypeId)}
                       compact
                       showStatusTag={false}
                       showRemainingDays={false}
@@ -1181,7 +1185,7 @@ export default function StudentsPage() {
                               <ClassCard
                                 compact
                                 data={classItem}
-                                classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                                classTypeName={getClassTypeName(classItem.classTypeId)}
                                 showRemainingDays={false}
                                 onClick={() => setSelectedTransferClassId(classItem.id)}
                                 headerExtra={<Radio checked={selected} />}
@@ -1270,7 +1274,7 @@ export default function StudentsPage() {
                           <ClassCard
                             compact
                             data={classItem}
-                            classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                            classTypeName={getClassTypeName(classItem.classTypeId)}
                             showStatusTag={false}
                             showRemainingDays={false}
                             onClick={() => handleToggleAvailableClassSelection(classItem.id)}

@@ -1,27 +1,20 @@
 import { useState } from 'react'
-import { Breadcrumb, Button, DatePicker, Form, Input, Space, Typography, message } from 'antd'
-import type { Dayjs } from 'dayjs'
-import ptBR from 'antd/es/date-picker/locale/pt_BR'
+import { Breadcrumb, Button, Form, Space, Typography, message } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import AppDialog from '../../components/feedback/AppDialog'
+import ClassFormFields, { type ClassFormValues } from '../../components/classes/ClassFormFields'
 import { createClass } from '../../services/class/class.service'
-
-type ClassCreateFormValues = {
-  name: string
-  period: [Dayjs, Dayjs]
-  subscriptionEndDate: Dayjs
-}
 
 export default function ClassCreatePage() {
   const navigate = useNavigate()
-  const [form] = Form.useForm<ClassCreateFormValues>()
+  const [form] = Form.useForm<ClassFormValues>()
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isPostCreateDialogOpen, setIsPostCreateDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [pendingValues, setPendingValues] = useState<ClassCreateFormValues | null>(null)
+  const [pendingValues, setPendingValues] = useState<ClassFormValues | null>(null)
   const [createdClassId, setCreatedClassId] = useState<string | null>(null)
 
-  const handleSubmitForm = (values: ClassCreateFormValues) => {
+  const handleSubmitForm = (values: ClassFormValues) => {
     setPendingValues(values)
     setIsConfirmOpen(true)
   }
@@ -59,7 +52,9 @@ export default function ClassCreatePage() {
         name: pendingValues.name.trim(),
         initDate: initDate.format('DD/MM/YYYY'),
         finishDate: finishDate.format('DD/MM/YYYY'),
-        subscriptionEndDate: pendingValues.subscriptionEndDate.format('DD/MM/YYYY'),
+        subscriptionEndDate: pendingValues.subscriptionEndDate?.format('DD/MM/YYYY') || undefined,
+        campusId: pendingValues.campusId,
+        classTypeId: pendingValues.classTypeId || undefined,
       })
 
       message.success('Turma criada com sucesso.')
@@ -91,51 +86,14 @@ export default function ClassCreatePage() {
         <Typography.Text type="secondary">Preencha todos os campos para cadastrar uma nova turma.</Typography.Text>
       </Space>
 
-      <Form<ClassCreateFormValues>
+      <Form<ClassFormValues>
         layout="vertical"
         form={form}
         onFinish={handleSubmitForm}
         requiredMark
         style={{ maxWidth: 720, width: '100%' }}
       >
-        <Form.Item
-          label="Nome da turma"
-          name="name"
-          rules={[
-            { required: true, message: 'Informe o nome da turma.' },
-            { whitespace: true, message: 'Informe o nome da turma.' },
-          ]}
-        >
-          <Input placeholder="Ex.: Teste | Admin" maxLength={120} />
-        </Form.Item>
-
-        <Form.Item
-          label="Período da turma"
-          name="period"
-          rules={[{ required: true, message: 'Selecione a data de início e fim.' }]}
-        >
-          <DatePicker.RangePicker
-            style={{ width: '100%' }}
-            format="DD/MM/YYYY"
-            locale={ptBR}
-            placeholder={['Data de início', 'Data de fim']}
-            allowClear={false}
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="Data limite de inscrição"
-          name="subscriptionEndDate"
-          rules={[{ required: true, message: 'Selecione a data limite de inscrição.' }]}
-        >
-          <DatePicker
-            style={{ width: '100%' }}
-            format="DD/MM/YYYY"
-            locale={ptBR}
-            placeholder="Selecione a data"
-            allowClear={false}
-          />
-        </Form.Item>
+        <ClassFormFields form={form} />
 
         <Space size={8}>
           <Button type="primary" htmlType="submit" loading={isSubmitting}>

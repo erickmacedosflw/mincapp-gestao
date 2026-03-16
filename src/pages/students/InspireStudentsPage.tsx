@@ -140,6 +140,10 @@ export default function InspireStudentsPage() {
     return new Map(entries.map((item) => [item.id, item.name]))
   }, [classTypesQuery.data])
 
+  const getClassTypeName = useCallback((classTypeId?: string | null) => {
+    return classTypeId ? classTypeNameMap.get(classTypeId) : undefined
+  }, [classTypeNameMap])
+
   const activeClasses = useMemo<ClassItem[]>(() => {
     const subscriptions = studentDetailsQuery.data?.subscriptions ?? []
 
@@ -189,13 +193,13 @@ export default function InspireStudentsPage() {
     const groupedMap = new Map<string, ClassItem[]>()
 
     availableClassesForAdd.forEach((item) => {
-      const typeName = classTypeNameMap.get(item.classTypeId) ?? 'Sem tipo'
+      const typeName = getClassTypeName(item.classTypeId) ?? 'Sem tipo'
       const current = groupedMap.get(typeName) ?? []
       groupedMap.set(typeName, [...current, item])
     })
 
     return Array.from(groupedMap.entries()).map(([typeName, items]) => ({ typeName, items }))
-  }, [availableClassesForAdd, classTypeNameMap])
+  }, [availableClassesForAdd, getClassTypeName])
 
   const handleSearch = (value: string) => {
     setPage(1)
@@ -985,7 +989,7 @@ export default function InspireStudentsPage() {
                     <ClassCard
                       key={classItem.id}
                       data={classItem}
-                      classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                      classTypeName={getClassTypeName(classItem.classTypeId)}
                       compact
                       showStatusTag={false}
                       headerExtra={
@@ -1032,7 +1036,7 @@ export default function InspireStudentsPage() {
                     <ClassCard
                       key={classItem.id}
                       data={classItem}
-                      classTypeName={classTypeNameMap.get(classItem.classTypeId)}
+                      classTypeName={getClassTypeName(classItem.classTypeId)}
                       compact
                       showStatusTag={false}
                       showRemainingDays={false}
@@ -1132,11 +1136,11 @@ export default function InspireStudentsPage() {
                               }}
                             />
                           ) : null}
-                          <ClassCard
-                            compact
-                            data={classItem}
-                            classTypeName={classTypeNameMap.get(classItem.classTypeId)}
-                            showStatusTag={false}
+                            <ClassCard
+                              compact
+                              data={classItem}
+                              classTypeName={getClassTypeName(classItem.classTypeId)}
+                              showStatusTag={false}
                             showRemainingDays={false}
                             onClick={() => handleToggleAvailableClassSelection(classItem.id)}
                           />

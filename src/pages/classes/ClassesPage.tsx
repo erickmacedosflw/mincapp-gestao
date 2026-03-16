@@ -10,18 +10,22 @@ import ClassCard from '../../components/classes/ClassCard'
 import { isClassActive, isClassFinished } from '../../utils/date'
 import { getClassTypes } from '../../services/class/class-type.service'
 import type { ClassTypeItem } from '../../types/class-type'
+import { getCampuses } from '../../services/campus/campus.service'
+import type { CampusItem } from '../../types/campus'
 
 type ClassFilter = 'ongoing' | 'closed'
 
 export default function ClassesPage() {
   const navigate = useNavigate()
-  const { hasPermission } = useAdminAccess()
+  const { admin, hasPermission } = useAdminAccess()
   const canManageClasses = hasPermission(ADMIN_PERMISSIONS.gerenciarTurmas)
   const [classes, setClasses] = useState<ClassItem[]>([])
   const [classTypes, setClassTypes] = useState<ClassTypeItem[]>([])
+  const [campuses, setCampuses] = useState<CampusItem[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [filter, setFilter] = useState<ClassFilter>('ongoing')
+  const [selectedCampusId, setSelectedCampusId] = useState<string>('all')
   const [selectedTypeId, setSelectedTypeId] = useState<string>('all')
 
   useEffect(() => {
@@ -30,9 +34,10 @@ export default function ClassesPage() {
         setLoading(true)
         setErrorMessage(null)
 
-        const [classData, classTypeData] = await Promise.all([getClasses(), getClassTypes()])
+        const [classData, classTypeData, campusData] = await Promise.all([getClasses(), getClassTypes(), getCampuses()])
         setClasses(classData)
         setClassTypes(classTypeData)
+        setCampuses(campusData)
       } catch {
         setErrorMessage('Não foi possível carregar as turmas.')
       } finally {
@@ -43,18 +48,29 @@ export default function ClassesPage() {
     loadClasses()
   }, [])
 
+  const availableCampuses = useMemo(() => {
+    if (!admin?.campusIds?.length) {
+      return campuses
+    }
+
+    const allowedCampusIds = new Set(admin.campusIds)
+    return campuses.filter((campus) => allowedCampusIds.has(campus.id))
+  }, [admin?.campusIds, campuses])
+
   const filteredClasses = useMemo(() => {
     const byStatus =
       filter === 'ongoing'
         ? classes.filter((item) => isClassActive(item.initDate, item.finishDate))
         : classes.filter((item) => isClassFinished(item.finishDate))
 
+    const byCampus = selectedCampusId === 'all' ? byStatus : byStatus.filter((item) => item.campusId === selectedCampusId)
+
     if (selectedTypeId === 'all') {
-      return byStatus
+      return byCampus
     }
 
-    return byStatus.filter((item) => item.classTypeId === selectedTypeId)
-  }, [classes, filter, selectedTypeId])
+    return byCampus.filter((item) => item.classTypeId === selectedTypeId)
+  }, [classes, filter, selectedCampusId, selectedTypeId])
 
   const typeNameById = useMemo(() => {
     return new Map(classTypes.map((item) => [item.id, item.name]))
@@ -64,8 +80,9 @@ export default function ClassesPage() {
     const groupedMap = new Map<string, ClassItem[]>()
 
     filteredClasses.forEach((item) => {
-      const existing = groupedMap.get(item.classTypeId) ?? []
-      groupedMap.set(item.classTypeId, [...existing, item])
+      const typeId = item.classTypeId ?? 'unknown'
+      const existing = groupedMap.get(typeId) ?? []
+      groupedMap.set(typeId, [...existing, item])
     })
 
     const orderedGroups = classTypes
@@ -76,7 +93,7 @@ export default function ClassesPage() {
       }))
       .filter((group) => group.items.length > 0)
 
-    const unknownTypeItems = filteredClasses.filter((item) => !typeNameById.get(item.classTypeId))
+    const unknownTypeItems = filteredClasses.filter((item) => !item.classTypeId || !typeNameById.get(item.classTypeId))
 
     if (unknownTypeItems.length > 0) {
       orderedGroups.push({
@@ -122,6 +139,16 @@ export default function ClassesPage() {
       />
 
       <Select
+        value={selectedCampusId}
+        style={{ width: 260, maxWidth: '100%' }}
+        onChange={setSelectedCampusId}
+        options={[
+          { label: 'Todos os campus', value: 'all' },
+          ...availableCampuses.map((item) => ({ label: item.name, value: item.id })),
+        ]}
+      />
+
+      <Select
         value={selectedTypeId}
         style={{ width: 260, maxWidth: '100%' }}
         onChange={setSelectedTypeId}
@@ -149,7 +176,7 @@ export default function ClassesPage() {
                   <Col xs={24} md={12} lg={8} key={item.id}>
                     <ClassCard
                       data={item}
-                      classTypeName={typeNameById.get(item.classTypeId)}
+                      classTypeName={item.classTypeId ? typeNameById.get(item.classTypeId) : undefined}
                       onClick={() => navigate(`/class/${item.id}`)}
                     />
                   </Col>

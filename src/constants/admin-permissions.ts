@@ -6,6 +6,10 @@ export const DEFAULT_ADMIN_PERMISSIONS: CreatePermissionTypePayload[] = [
     description: 'Acessa a area de turmas, incluindo listagem, criacao e gestao geral da turma',
   },
   {
+    name: 'gerenciar_tipos_turma',
+    description: 'Acessa a area de tipos de turma, incluindo listagem, criacao, edicao e exclusao',
+  },
+  {
     name: 'gerenciar_alunos',
     description: 'Acessa a area de alunos, incluindo listagens, vinculo com turmas, transferencias e vida academica',
   },

@@ -1,29 +1,58 @@
+import { AxiosError } from 'axios'
 import { apiClient } from '../api/client'
-import type { ClassItem, EducationClassResponse } from '../../types/class'
+import type {
+  ClassFilters,
+  ClassItem,
+  CreateClassPayload,
+  DeleteClassResponse,
+  EducationClassResponse,
+  UpdateClassPayload,
+} from '../../types/class'
 
-const CLASS_CAMPUS_ID = import.meta.env.VITE_CLASS_CAMPUS_ID?.trim()
-
-if (!CLASS_CAMPUS_ID) {
-  throw new Error('VITE_CLASS_CAMPUS_ID não foi configurada no ambiente.')
+type ApiError = {
+  message?: string
 }
 
-type CreateClassParams = {
-  name: string
-  initDate: string
-  finishDate: string
-  subscriptionEndDate: string
+function resolveApiErrorMessage(error: unknown, fallbackMessage: string) {
+  const axiosError = error as AxiosError<ApiError>
+  return axiosError.response?.data?.message ?? fallbackMessage
 }
 
-export async function getClasses(campusId?: string) {
-  const response = await apiClient.get<ClassItem[]>('/class', {
-    params: campusId ? { campusId } : undefined,
-  })
-  return response.data
+export async function getClasses(filters?: ClassFilters | string) {
+  const normalizedFilters =
+    typeof filters === 'string'
+      ? {
+          campusId: filters,
+        }
+      : filters
+
+  try {
+    const response = await apiClient.get<ClassItem[]>('/class', {
+      params: {
+        campusId: normalizedFilters?.campusId || undefined,
+        classTypeId: normalizedFilters?.classTypeId || undefined,
+      },
+    })
+
+    return response.data
+  } catch (error) {
+    throw new Error(resolveApiErrorMessage(error, 'Não foi possível carregar as turmas.'))
+  }
 }
 
 export async function getClassById(classId: string) {
-  const allClasses = await getClasses()
-  return allClasses.find((item) => item.id === classId) ?? null
+  try {
+    const response = await apiClient.get<ClassItem>(`/class/${classId}`)
+    return response.data
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiError>
+
+    if (axiosError.response?.status === 404) {
+      return null
+    }
+
+    throw new Error(resolveApiErrorMessage(error, 'Não foi possível carregar a turma.'))
+  }
 }
 
 type RemoveStudentFromClassParams = {
@@ -56,13 +85,31 @@ export async function addStudentToClass({
   })
 }
 
-export async function createClass(payload: CreateClassParams) {
-  const response = await apiClient.post<ClassItem>('/class', {
-    ...payload,
-    campusId: CLASS_CAMPUS_ID,
-  })
+export async function createClass(payload: CreateClassPayload) {
+  try {
+    const response = await apiClient.post<ClassItem>('/class', payload)
+    return response.data
+  } catch (error) {
+    throw new Error(resolveApiErrorMessage(error, 'Não foi possível criar a turma.'))
+  }
+}
 
-  return response.data
+export async function updateClass(classId: string, payload: UpdateClassPayload) {
+  try {
+    const response = await apiClient.put<ClassItem>(`/class/${classId}`, payload)
+    return response.data
+  } catch (error) {
+    throw new Error(resolveApiErrorMessage(error, 'Não foi possível atualizar a turma.'))
+  }
+}
+
+export async function deleteClass(classId: string) {
+  try {
+    const response = await apiClient.delete<DeleteClassResponse>(`/class/${classId}`)
+    return response.data
+  } catch (error) {
+    throw new Error(resolveApiErrorMessage(error, 'Não foi possível excluir a turma.'))
+  }
 }
 
 export async function getEducationClassStudents(classId: string) {

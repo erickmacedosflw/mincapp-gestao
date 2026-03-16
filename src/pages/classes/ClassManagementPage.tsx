@@ -5,6 +5,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
   FileTextOutlined,
   PaperClipOutlined,
   TeamOutlined,
@@ -34,7 +36,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ADMIN_PERMISSIONS } from '../../access/admin-access'
 import { useAdminAccess } from '../../access/use-admin-access'
 import type { ClassItem } from '../../types/class'
-import { getClassById } from '../../services/class/class.service'
+import { deleteClass, getClassById } from '../../services/class/class.service'
 import { getClassTypes } from '../../services/class/class-type.service'
 import type { ClassTypeItem } from '../../types/class-type'
 import {
@@ -59,6 +61,7 @@ export default function ClassManagementPage() {
   const navigate = useNavigate()
   const { classId } = useParams()
   const { hasPermission } = useAdminAccess()
+  const canManageClasses = hasPermission(ADMIN_PERMISSIONS.gerenciarTurmas)
   const canManageStudents = hasPermission(ADMIN_PERMISSIONS.gerenciarAlunos)
   const canManageSubjects = hasPermission(ADMIN_PERMISSIONS.gerenciarMaterias)
   const canManageJustifications = hasPermission(ADMIN_PERMISSIONS.gerenciarJustificativas)
@@ -74,8 +77,10 @@ export default function ClassManagementPage() {
     type: 'accept' | 'reject'
     item: JustificationItem
   } | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [openReceiptsByJustification, setOpenReceiptsByJustification] = useState<Set<string>>(new Set())
   const [submittingAction, setSubmittingAction] = useState(false)
+  const [submittingDelete, setSubmittingDelete] = useState(false)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -156,7 +161,7 @@ export default function ClassManagementPage() {
       return 'Sem tipo'
     }
 
-    return classTypes.find((item) => item.id === classData.classTypeId)?.name ?? 'Sem tipo'
+    return classData.classType?.name ?? classTypes.find((item) => item.id === classData.classTypeId)?.name ?? 'Sem tipo'
   }, [classData, classTypes])
 
   const groupedPendingByStudent = useMemo(() => {
@@ -263,6 +268,25 @@ export default function ClassManagementPage() {
     }
   }
 
+  const handleConfirmDeleteClass = async () => {
+    if (!classData) {
+      return
+    }
+
+    try {
+      setSubmittingDelete(true)
+      await deleteClass(classData.id)
+      message.success('Turma excluída com sucesso.')
+      navigate('/class', { replace: true })
+    } catch (error) {
+      const nextMessage = error instanceof Error ? error.message : 'Não foi possível excluir a turma.'
+      message.error(nextMessage)
+    } finally {
+      setSubmittingDelete(false)
+      setIsDeleteDialogOpen(false)
+    }
+  }
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Breadcrumb
@@ -301,10 +325,31 @@ export default function ClassManagementPage() {
                   </Space>
                 </Space>
 
+                {classData.subscriptionEndDate ? (
+                  <Space size={8} align="start">
+                    <CalendarOutlined style={{ marginTop: 3 }} />
+                    <Space direction="vertical" size={0}>
+                      <Typography.Text strong>Inscrições até</Typography.Text>
+                      <Typography.Text type="secondary">{classData.subscriptionEndDate}</Typography.Text>
+                    </Space>
+                  </Space>
+                ) : null}
+
                 {!finished ? (
                   <Typography.Text type="secondary">
                     Faltam <Typography.Text strong>{remainingDays} dias</Typography.Text> para encerramento da turma
                   </Typography.Text>
+                ) : null}
+
+                {canManageClasses ? (
+                  <Space size={8} wrap>
+                    <Button icon={<EditOutlined />} onClick={() => navigate(`/class/${classData.id}/edit`)}>
+                      Editar turma
+                    </Button>
+                    <Button danger icon={<DeleteOutlined />} onClick={() => setIsDeleteDialogOpen(true)}>
+                      Excluir turma
+                    </Button>
+                  </Space>
                 ) : null}
               </Space>
             </Card>
@@ -550,6 +595,22 @@ export default function ClassManagementPage() {
         onCancel={() => {
           if (!submittingAction) {
             setConfirmAction(null)
+          }
+        }}
+      />
+
+      <AppDialog
+        open={isDeleteDialogOpen}
+        type="danger"
+        title="Excluir turma"
+        message={classData ? `Deseja realmente excluir a turma "${classData.name}"?` : 'Deseja realmente excluir esta turma?'}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmLoading={submittingDelete}
+        onConfirm={handleConfirmDeleteClass}
+        onCancel={() => {
+          if (!submittingDelete) {
+            setIsDeleteDialogOpen(false)
           }
         }}
       />

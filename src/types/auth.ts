@@ -1,5 +1,6 @@
 import type { PermissionTypeItem } from './admin'
 import type { TenantId } from '../config/tenant'
+import type { CampusItem } from './campus'
 
 export type LoginPayload = {
   email: string
@@ -12,6 +13,8 @@ export type AdminProfile = {
   email: string
   isActive?: boolean
   permissions?: PermissionTypeItem[]
+  campuses?: CampusItem[]
+  campusIds?: string[]
   createdAt?: string
   updatedAt?: string
 }

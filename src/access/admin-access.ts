@@ -2,6 +2,7 @@ import type { AdminProfile } from "../types/auth";
 
 export const ADMIN_PERMISSIONS = {
   gerenciarTurmas: "gerenciar_turmas",
+  gerenciarTiposTurma: "gerenciar_tipos_turma",
   gerenciarAlunos: "gerenciar_alunos",
   gerenciarMaterias: "gerenciar_materias",
   gerenciarPresencas: "gerenciar_presencas",
@@ -55,6 +56,10 @@ export function getDefaultAuthorizedPath(
 ) {
   if (canAccessClassHub(admin)) {
     return "/class";
+  }
+
+  if (hasPermission(ADMIN_PERMISSIONS.gerenciarTiposTurma, admin)) {
+    return "/class-types";
   }
 
   if (hasPermission(ADMIN_PERMISSIONS.gerenciarAlunos, admin)) {

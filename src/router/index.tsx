@@ -12,6 +12,8 @@ import ClassesPage from "../pages/classes/ClassesPage";
 import ClassManagementPage from "../pages/classes/ClassManagementPage";
 import ClassJustificationsPage from "../pages/classes/ClassJustificationsPage";
 import ClassCreatePage from "../pages/classes/ClassCreatePage";
+import ClassEditPage from "../pages/classes/ClassEditPage";
+import ClassTypesPage from "../pages/classes/ClassTypesPage";
 import SubjectsPage from "../pages/subjects/SubjectsPage";
 import SubjectCreatePage from "../pages/subjects/SubjectCreatePage";
 import SubjectEditPage from "../pages/subjects/SubjectEditPage";
@@ -58,6 +60,22 @@ export const appRouter = createBrowserRouter([
         element: (
           <PermissionRoute permissions={[ADMIN_PERMISSIONS.gerenciarTurmas]}>
             <ClassCreatePage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "class/:classId/edit",
+        element: (
+          <PermissionRoute permissions={[ADMIN_PERMISSIONS.gerenciarTurmas]}>
+            <ClassEditPage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "class-types",
+        element: (
+          <PermissionRoute permissions={[ADMIN_PERMISSIONS.gerenciarTiposTurma]}>
+            <ClassTypesPage />
           </PermissionRoute>
         ),
       },

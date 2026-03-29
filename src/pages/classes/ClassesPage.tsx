@@ -7,13 +7,13 @@ import { useAdminAccess } from '../../access/use-admin-access'
 import type { ClassItem } from '../../types/class'
 import { getClasses } from '../../services/class/class.service'
 import ClassCard from '../../components/classes/ClassCard'
-import { isClassActive, isClassFinished } from '../../utils/date'
+import { isClassActive, isClassFinished, isClassScheduled } from '../../utils/date'
 import { getClassTypes } from '../../services/class/class-type.service'
 import type { ClassTypeItem } from '../../types/class-type'
 import { getCampuses } from '../../services/campus/campus.service'
 import type { CampusItem } from '../../types/campus'
 
-type ClassFilter = 'ongoing' | 'closed'
+type ClassFilter = 'scheduled' | 'ongoing' | 'closed'
 
 export default function ClassesPage() {
   const navigate = useNavigate()
@@ -58,10 +58,17 @@ export default function ClassesPage() {
   }, [admin?.campusIds, campuses])
 
   const filteredClasses = useMemo(() => {
-    const byStatus =
-      filter === 'ongoing'
-        ? classes.filter((item) => isClassActive(item.initDate, item.finishDate))
-        : classes.filter((item) => isClassFinished(item.finishDate))
+    const byStatus = classes.filter((item) => {
+      if (filter === 'scheduled') {
+        return isClassScheduled(item.initDate)
+      }
+
+      if (filter === 'ongoing') {
+        return isClassActive(item.initDate, item.finishDate)
+      }
+
+      return isClassFinished(item.finishDate)
+    })
 
     const byCampus = selectedCampusId === 'all' ? byStatus : byStatus.filter((item) => item.campusId === selectedCampusId)
 
@@ -133,6 +140,7 @@ export default function ClassesPage() {
         value={filter}
         onChange={(event) => setFilter(event.target.value)}
         options={[
+          { label: 'Agendadas', value: 'scheduled' },
           { label: 'Em andamento', value: 'ongoing' },
           { label: 'Encerradas', value: 'closed' },
         ]}

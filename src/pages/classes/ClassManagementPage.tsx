@@ -215,8 +215,11 @@ export default function ClassManagementPage() {
     return <Empty description="Turma não encontrada." />
   }
 
+  const scheduled = getPeriodStatus(classData.initDate, classData.finishDate) === 'not_started'
   const finished = isClassFinished(classData.finishDate)
   const remainingDays = getDaysUntilClassEnd(classData.finishDate)
+  const statusLabel = scheduled ? 'Agendada' : finished ? 'Encerrada' : 'Em andamento'
+  const statusColor = finished ? 'default' : scheduled ? 'gold' : 'blue'
 
   const toggleReceipts = (justificationId: string) => {
     setOpenReceiptsByJustification((previous) => {
@@ -307,7 +310,7 @@ export default function ClassManagementPage() {
 
                 <Space size={6} wrap>
                   <Tag>{typeName}</Tag>
-                  <Tag color={finished ? 'default' : 'blue'}>{finished ? 'Encerrada' : 'Em andamento'}</Tag>
+                  <Tag color={statusColor}>{statusLabel}</Tag>
                 </Space>
 
                 <Space size={8}>
@@ -335,7 +338,7 @@ export default function ClassManagementPage() {
                   </Space>
                 ) : null}
 
-                {!finished ? (
+                {!finished && !scheduled ? (
                   <Typography.Text type="secondary">
                     Faltam <Typography.Text strong>{remainingDays} dias</Typography.Text> para encerramento da turma
                   </Typography.Text>

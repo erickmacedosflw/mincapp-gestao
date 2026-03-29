@@ -2,7 +2,7 @@ import { CalendarOutlined, ClockCircleOutlined, EnvironmentOutlined } from '@ant
 import { Card, Space, Tag, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import type { ClassItem } from '../../types/class'
-import { getDaysUntilClassEnd, isClassFinished, toPeriodLabel } from '../../utils/date'
+import { getDaysUntilClassEnd, getPeriodStatus, toPeriodLabel } from '../../utils/date'
 
 type ClassCardProps = {
   data: ClassItem
@@ -23,9 +23,13 @@ export default function ClassCard({
   headerExtra,
   compact = false,
 }: ClassCardProps) {
-  const finished = isClassFinished(data.finishDate)
+  const periodStatus = getPeriodStatus(data.initDate, data.finishDate)
+  const finished = periodStatus === 'closed'
+  const scheduled = periodStatus === 'not_started'
   const remainingDays = getDaysUntilClassEnd(data.finishDate)
   const resolvedClassTypeName = classTypeName ?? data.classType?.name ?? 'Sem tipo'
+  const statusLabel = scheduled ? 'Agendada' : finished ? 'Encerrada' : 'Em andamento'
+  const statusColor = finished ? 'default' : scheduled ? 'gold' : 'blue'
 
   const content = (
     <Space direction="vertical" size={compact ? 8 : 10} style={{ width: '100%' }}>
@@ -35,7 +39,7 @@ export default function ClassCard({
         </Typography.Title>
         <Space size={6} wrap>
           <Tag>{resolvedClassTypeName}</Tag>
-          {showStatusTag ? <Tag color={finished ? 'default' : 'blue'}>{finished ? 'Encerrada' : 'Em andamento'}</Tag> : null}
+          {showStatusTag ? <Tag color={statusColor}>{statusLabel}</Tag> : null}
         </Space>
       </Space>
 
@@ -65,7 +69,7 @@ export default function ClassCard({
         </Space>
       ) : null}
 
-      {showRemainingDays && !finished ? (
+      {showRemainingDays && !finished && !scheduled ? (
         <Space size={8}>
           <ClockCircleOutlined />
           <Typography.Text type="secondary">

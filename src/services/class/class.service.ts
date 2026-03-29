@@ -73,6 +73,11 @@ type AddStudentToClassParams = {
   studentId: string;
 };
 
+type AddStudentsToClassParams = {
+  classId: string;
+  studentIds: string[];
+};
+
 export async function removeStudentFromClass({
   classId,
   studentId,
@@ -88,8 +93,18 @@ export async function addStudentToClass({
   classId,
   studentId,
 }: AddStudentToClassParams) {
-  await apiClient.post(`/class/student/add/${classId}`, {
+  await addStudentsToClass({
+    classId,
     studentIds: [studentId],
+  });
+}
+
+export async function addStudentsToClass({
+  classId,
+  studentIds,
+}: AddStudentsToClassParams) {
+  await apiClient.post(`/class/student/add/${classId}`, {
+    studentIds,
   });
 }
 

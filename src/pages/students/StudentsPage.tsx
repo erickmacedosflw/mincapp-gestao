@@ -15,6 +15,7 @@ import "maptalks/dist/maptalks.css";
 import AppDialog from "../../components/feedback/AppDialog";
 import StudentsPageAddClassModal from "./components/StudentsPageAddClassModal";
 import StudentsPageAddressModal from "./components/StudentsPageAddressModal";
+import StudentsPageAddTenantStudentsModal from "./components/StudentsPageAddTenantStudentsModal";
 import StudentsPageClassSummaryCard from "./components/StudentsPageClassSummaryCard";
 import StudentsPageSearchCard from "./components/StudentsPageSearchCard";
 import StudentsPageStudentClassesModal from "./components/StudentsPageStudentClassesModal";
@@ -54,6 +55,21 @@ export default function StudentsPage() {
     transferringStudent,
     handleConfirmTransferStudent,
     closeTransferModal,
+    tenantStudentsModalOpen,
+    openTenantStudentsModal,
+    closeTenantStudentsModal,
+    tenantStudentsQuery,
+    tenantStudentSearchInput,
+    setTenantStudentSearchInput,
+    handleTenantStudentsSearch,
+    tenantStudentsPage,
+    handleTenantStudentsPageChange,
+    selectedTenantStudentIds,
+    handleTenantStudentsSelectionChange,
+    currentClassStudentIds,
+    addingTenantStudents,
+    TENANT_STUDENTS_PER_PAGE,
+    handleAddTenantStudentsToClass,
     addClassModalOpen,
     setAddClassModalOpen,
     groupedAvailableClassesForAdd,
@@ -147,6 +163,7 @@ export default function StudentsPage() {
             total={total}
             canViewDashboards={canViewDashboards}
             onOpenDashboard={() => navigate("/dashboard")}
+            onOpenAddStudentsModal={openTenantStudentsModal}
           />
         </Col>
 
@@ -187,6 +204,26 @@ export default function StudentsPage() {
         buildAddressLabel={buildAddressLabel}
         buildGoogleMapsUri={buildGoogleMapsUri}
         onClose={() => setAddressPreviewStudent(null)}
+      />
+
+      <StudentsPageAddTenantStudentsModal
+        open={tenantStudentsModalOpen}
+        students={tenantStudentsQuery.data?.data ?? []}
+        total={tenantStudentsQuery.data?.total ?? 0}
+        page={tenantStudentsPage}
+        perPage={TENANT_STUDENTS_PER_PAGE}
+        searchInput={tenantStudentSearchInput}
+        selectedStudentIds={selectedTenantStudentIds}
+        currentClassStudentIds={currentClassStudentIds}
+        isLoading={tenantStudentsQuery.isLoading || tenantStudentsQuery.isFetching}
+        isSaving={addingTenantStudents}
+        isError={tenantStudentsQuery.isError}
+        onSearchInputChange={setTenantStudentSearchInput}
+        onSearch={handleTenantStudentsSearch}
+        onPageChange={handleTenantStudentsPageChange}
+        onSelectionChange={handleTenantStudentsSelectionChange}
+        onClose={closeTenantStudentsModal}
+        onConfirm={handleAddTenantStudentsToClass}
       />
 
       <StudentsPageStudentClassesModal

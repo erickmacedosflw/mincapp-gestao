@@ -1,4 +1,8 @@
-import { BarChartOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import {
+  BarChartOutlined,
+  ClockCircleOutlined,
+  UserAddOutlined,
+} from "@ant-design/icons";
 import { Button, Card, Space, Tag, Typography } from "antd";
 import type { ClassItem } from "../../../types/class";
 import { getDaysUntilClassEnd, isClassFinished, toPeriodLabel } from "../../../utils/date";
@@ -8,6 +12,7 @@ type StudentsPageClassSummaryCardProps = {
   total: number;
   canViewDashboards: boolean;
   onOpenDashboard: () => void;
+  onOpenAddStudentsModal: () => void;
 };
 
 export default function StudentsPageClassSummaryCard({
@@ -15,6 +20,7 @@ export default function StudentsPageClassSummaryCard({
   total,
   canViewDashboards,
   onOpenDashboard,
+  onOpenAddStudentsModal,
 }: StudentsPageClassSummaryCardProps) {
   const classFinished = selectedClass
     ? isClassFinished(selectedClass.finishDate)
@@ -63,6 +69,14 @@ export default function StudentsPageClassSummaryCard({
             Dashboard de alunos
           </Button>
         ) : null}
+
+        <Button
+          icon={<UserAddOutlined />}
+          onClick={onOpenAddStudentsModal}
+          style={{ width: "fit-content" }}
+        >
+          Adicionar novos alunos
+        </Button>
       </Space>
     </Card>
   );

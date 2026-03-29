@@ -1,5 +1,6 @@
 import type { CampusItem } from './campus'
 import type { ClassTypeItem } from './class-type'
+import type { StudentItem } from './student'
 
 export type ClassItem = {
   id: string
@@ -11,6 +12,7 @@ export type ClassItem = {
   campus?: CampusItem | null
   classTypeId?: string | null
   classType?: ClassTypeItem | null
+  students?: StudentItem[]
   createdAt: string
   updatedAt: string
 }

@@ -50,6 +50,18 @@ export async function getAllStudentsWithoutPagination() {
   return response.data.data
 }
 
+export async function getTenantStudents({ page, perPage, search }: GetStudentsParams) {
+  const response = await apiClient.get<StudentsListResponse>('/student', {
+    params: {
+      page,
+      perPage,
+      search: search || undefined,
+    },
+  })
+
+  return response.data
+}
+
 export async function getStudentById(studentId: string) {
   const response = await apiClient.get<StudentDetailsResponse>('/student/me', {
     params: {

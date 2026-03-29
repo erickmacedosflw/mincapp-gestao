@@ -10,10 +10,12 @@ import type { StudentsListResponse } from "../../types/student";
 import {
   getStudentById,
   getStudentsByClassId,
+  getTenantStudents,
 } from "../../services/student/student.service";
 import { getClassById, getClasses } from "../../services/class/class.service";
 import { getClassTypes } from "../../services/class/class-type.service";
 import {
+  addStudentsToClass,
   addStudentToClass,
   removeStudentFromClass,
 } from "../../services/class/class.service";
@@ -22,6 +24,7 @@ import type { ClassTypeItem } from "../../types/class-type";
 import * as maptalks from "maptalks";
 
 const PER_PAGE = 15;
+const TENANT_STUDENTS_PER_PAGE = 10;
 type MapCoordinates = [number, number];
 
 export function useStudentsPage() {
@@ -52,6 +55,13 @@ export function useStudentsPage() {
   const [selectedTransferClassId, setSelectedTransferClassId] = useState<
     string | null
   >(null);
+  const [tenantStudentsModalOpen, setTenantStudentsModalOpen] = useState(false);
+  const [tenantStudentsPage, setTenantStudentsPage] = useState(1);
+  const [tenantStudentSearchInput, setTenantStudentSearchInput] = useState("");
+  const [tenantStudentSearchTerm, setTenantStudentSearchTerm] = useState("");
+  const [selectedTenantStudentIds, setSelectedTenantStudentIds] = useState<
+    string[]
+  >([]);
   const [addClassModalOpen, setAddClassModalOpen] = useState(false);
   const [selectedAvailableClassIds, setSelectedAvailableClassIds] = useState<
     string[]
@@ -61,6 +71,7 @@ export function useStudentsPage() {
   >([]);
   const [showClosedClasses, setShowClosedClasses] = useState(false);
   const [removingStudent, setRemovingStudent] = useState(false);
+  const [addingTenantStudents, setAddingTenantStudents] = useState(false);
   const [addingStudent, setAddingStudent] = useState(false);
   const [transferringStudent, setTransferringStudent] = useState(false);
   const [mapCoordinates, setMapCoordinates] = useState<MapCoordinates | null>(
@@ -70,6 +81,10 @@ export function useStudentsPage() {
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
 
   const normalizedSearch = useMemo(() => searchTerm.trim(), [searchTerm]);
+  const normalizedTenantStudentSearch = useMemo(
+    () => tenantStudentSearchTerm.trim(),
+    [tenantStudentSearchTerm],
+  );
 
   const selectedClassQuery = useQuery<ClassItem | null>({
     queryKey: ["class", classId],
@@ -87,6 +102,22 @@ export function useStudentsPage() {
         search: normalizedSearch,
       }),
     enabled: Boolean(classId),
+  });
+
+  const tenantStudentsQuery = useQuery<StudentsListResponse>({
+    queryKey: [
+      "students",
+      "tenant-student-page",
+      tenantStudentsPage,
+      normalizedTenantStudentSearch,
+    ],
+    queryFn: () =>
+      getTenantStudents({
+        page: tenantStudentsPage,
+        perPage: TENANT_STUDENTS_PER_PAGE,
+        search: normalizedTenantStudentSearch,
+      }),
+    enabled: tenantStudentsModalOpen,
   });
 
   const classTypesQuery = useQuery<ClassTypeItem[]>({
@@ -197,6 +228,23 @@ export function useStudentsPage() {
     );
   }, [classId, transferClassesQuery.data]);
 
+  const currentClassStudentIds = useMemo(() => {
+    const selectedClassStudents = selectedClassQuery.data?.students ?? [];
+    const selectedClassStudentIds = selectedClassStudents
+      .map((student) => student.id)
+      .filter((studentId): studentId is string => Boolean(studentId));
+
+    if (selectedClassStudentIds.length > 0) {
+      return new Set(selectedClassStudentIds);
+    }
+
+    return new Set(
+      (studentsQuery.data?.data ?? [])
+        .map((student) => student.id)
+        .filter((studentId): studentId is string => Boolean(studentId)),
+    );
+  }, [selectedClassQuery.data?.students, studentsQuery.data?.data]);
+
   const groupedAvailableClassesForTransfer = useMemo(() => {
     const groupedMap = new Map<string, ClassItem[]>();
 
@@ -238,7 +286,10 @@ export function useStudentsPage() {
   };
 
   const refetchStudentsData = async (studentIdToRefresh?: string) => {
-    const requests: Array<Promise<unknown>> = [studentsQuery.refetch()];
+    const requests: Array<Promise<unknown>> = [
+      selectedClassQuery.refetch(),
+      studentsQuery.refetch(),
+    ];
 
     if (
       classesPreviewStudent?.id &&
@@ -259,6 +310,35 @@ export function useStudentsPage() {
   const handlePageChange = (nextPage: number) => {
     setPage(nextPage);
     listTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleTenantStudentsSearch = (value: string) => {
+    setTenantStudentsPage(1);
+    setTenantStudentSearchTerm(value.trim());
+  };
+
+  const handleTenantStudentsPageChange = (nextPage: number) => {
+    setTenantStudentsPage(nextPage);
+  };
+
+  const openTenantStudentsModal = () => {
+    setTenantStudentsModalOpen(true);
+  };
+
+  const closeTenantStudentsModal = (force = false) => {
+    if (addingTenantStudents && !force) {
+      return;
+    }
+
+    setTenantStudentsModalOpen(false);
+    setTenantStudentsPage(1);
+    setTenantStudentSearchInput("");
+    setTenantStudentSearchTerm("");
+    setSelectedTenantStudentIds([]);
+  };
+
+  const handleTenantStudentsSelectionChange = (studentIds: string[]) => {
+    setSelectedTenantStudentIds(studentIds);
   };
 
   const buildWhatsAppUri = (phone?: string | null) => {
@@ -364,6 +444,42 @@ export function useStudentsPage() {
       message.error("Não foi possível adicionar o aluno na turma.");
     } finally {
       setAddingStudent(false);
+    }
+  };
+
+  const handleAddTenantStudentsToClass = async () => {
+    if (!classId) {
+      return;
+    }
+
+    if (selectedTenantStudentIds.length === 0) {
+      message.warning("Selecione ao menos um aluno para continuar.");
+      return;
+    }
+
+    try {
+      setAddingTenantStudents(true);
+
+      await addStudentsToClass({
+        classId,
+        studentIds: selectedTenantStudentIds,
+      });
+
+      await refetchStudentsData();
+
+      message.success(
+        selectedTenantStudentIds.length === 1
+          ? "Aluno adicionado na turma com sucesso."
+          : `${selectedTenantStudentIds.length} alunos adicionados na turma com sucesso.`,
+      );
+      closeTenantStudentsModal(true);
+    } catch (error) {
+      const backendMessage = getErrorMessage(error);
+      message.error(
+        backendMessage ?? "Não foi possível adicionar os alunos na turma.",
+      );
+    } finally {
+      setAddingTenantStudents(false);
     }
   };
 
@@ -589,6 +705,21 @@ export function useStudentsPage() {
     transferringStudent,
     handleConfirmTransferStudent,
     closeTransferModal,
+    tenantStudentsModalOpen,
+    openTenantStudentsModal,
+    closeTenantStudentsModal,
+    tenantStudentsQuery,
+    tenantStudentSearchInput,
+    setTenantStudentSearchInput,
+    handleTenantStudentsSearch,
+    tenantStudentsPage,
+    handleTenantStudentsPageChange,
+    selectedTenantStudentIds,
+    handleTenantStudentsSelectionChange,
+    currentClassStudentIds,
+    addingTenantStudents,
+    TENANT_STUDENTS_PER_PAGE,
+    handleAddTenantStudentsToClass,
     addClassModalOpen,
     setAddClassModalOpen,
     groupedAvailableClassesForAdd,

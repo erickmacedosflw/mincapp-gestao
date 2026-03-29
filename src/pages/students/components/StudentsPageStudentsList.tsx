@@ -37,6 +37,10 @@ function formatCpf(value: string) {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
+function getOptionalStudentField(value?: string | null) {
+  return value || "-";
+}
+
 type StudentsPageStudentsListProps = {
   students: StudentItem[];
   total: number;
@@ -229,6 +233,30 @@ export default function StudentsPageStudentsList({
       },
     },
     {
+      title: "Tamanho da camisa",
+      dataIndex: "shirtSize",
+      key: "shirtSize",
+      width: 150,
+      render: (shirtSize: string | null | undefined) =>
+        getOptionalStudentField(shirtSize),
+    },
+    {
+      title: "Célula",
+      dataIndex: "cellName",
+      key: "cellName",
+      width: 150,
+      render: (cellName: string | null | undefined) =>
+        getOptionalStudentField(cellName),
+    },
+    {
+      title: "Líder",
+      dataIndex: "leaderName",
+      key: "leaderName",
+      width: 150,
+      render: (leaderName: string | null | undefined) =>
+        getOptionalStudentField(leaderName),
+    },
+    {
       title: "Turmas",
       key: "classes",
       width: 90,
@@ -331,6 +359,16 @@ export default function StudentsPageStudentsList({
                           "-"
                         )}
                       </Typography.Text>
+                      <Typography.Text type="secondary">
+                        Tamanho da camisa:{" "}
+                        {getOptionalStudentField(student.shirtSize)}
+                      </Typography.Text>
+                      <Typography.Text type="secondary">
+                        Célula: {getOptionalStudentField(student.cellName)}
+                      </Typography.Text>
+                      <Typography.Text type="secondary">
+                        Líder: {getOptionalStudentField(student.leaderName)}
+                      </Typography.Text>
                       {renderStudentRegistrationTag(student)}
                       <Space size={6}>
                         {renderStudentClassesShortcut(student)}
@@ -348,6 +386,7 @@ export default function StudentsPageStudentsList({
           dataSource={students}
           columns={desktopColumns}
           pagination={false}
+          scroll={{ x: 1100 }}
         />
       )}
 

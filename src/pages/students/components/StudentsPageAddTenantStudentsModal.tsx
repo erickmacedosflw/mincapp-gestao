@@ -41,6 +41,10 @@ function formatCpf(value: string) {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
+function getOptionalStudentField(value?: string | null) {
+  return value || "-";
+}
+
 export default function StudentsPageAddTenantStudentsModal({
   open,
   students,
@@ -78,6 +82,30 @@ export default function StudentsPageAddTenantStudentsModal({
       dataIndex: "email",
       key: "email",
       render: (email: string | null | undefined) => email || "Sem e-mail",
+    },
+    {
+      title: "Tamanho da camisa",
+      dataIndex: "shirtSize",
+      key: "shirtSize",
+      width: 150,
+      render: (shirtSize: string | null | undefined) =>
+        getOptionalStudentField(shirtSize),
+    },
+    {
+      title: "Célula",
+      dataIndex: "cellName",
+      key: "cellName",
+      width: 150,
+      render: (cellName: string | null | undefined) =>
+        getOptionalStudentField(cellName),
+    },
+    {
+      title: "Líder",
+      dataIndex: "leaderName",
+      key: "leaderName",
+      width: 150,
+      render: (leaderName: string | null | undefined) =>
+        getOptionalStudentField(leaderName),
     },
     {
       title: "Status",
@@ -151,6 +179,7 @@ export default function StudentsPageAddTenantStudentsModal({
               onChange: onPageChange,
               showSizeChanger: false,
             }}
+            scroll={{ x: 980 }}
             locale={{
               emptyText: "Nenhum aluno encontrado para os filtros informados.",
             }}

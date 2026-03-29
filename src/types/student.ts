@@ -4,6 +4,9 @@ export type StudentItem = {
   email: string
   cpf: string
   age: number
+  shirtSize?: string | null
+  cellName?: string | null
+  leaderName?: string | null
   dateBirth?: string | null
   gender?: string | null
   isMember?: boolean | null

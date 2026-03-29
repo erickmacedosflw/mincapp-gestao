@@ -58,6 +58,10 @@ function formatPhone(value?: string | null) {
   return value || '-'
 }
 
+function getOptionalStudentField(value?: string | null) {
+  return value || '-'
+}
+
 function SubscriptionCard({ item }: { item: StudentAvailableClassItem }) {
   return (
     <Card size="small">
@@ -190,6 +194,15 @@ export default function StudentAcademicLifePage() {
 
             <Typography.Text type="secondary">Profissão</Typography.Text>
             <Typography.Text>{student.profession ?? '-'}</Typography.Text>
+
+            <Typography.Text type="secondary">Tamanho da camisa</Typography.Text>
+            <Typography.Text>{getOptionalStudentField(student.shirtSize)}</Typography.Text>
+
+            <Typography.Text type="secondary">Célula</Typography.Text>
+            <Typography.Text>{getOptionalStudentField(student.cellName)}</Typography.Text>
+
+            <Typography.Text type="secondary">Líder</Typography.Text>
+            <Typography.Text>{getOptionalStudentField(student.leaderName)}</Typography.Text>
 
             {contactItems.map((item) => (
               <Space key={item.key} direction="vertical" size={2} style={{ width: '100%' }}>

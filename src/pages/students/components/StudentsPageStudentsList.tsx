@@ -178,16 +178,19 @@ export default function StudentsPageStudentsList({
     {
       title: "Aluno",
       key: "student",
+      width: 260,
       render: (_: unknown, student) => (
-        <Space size={10} align="center">
+        <Space size={10} align="center" style={{ minWidth: 220 }}>
           <Avatar
             size={42}
             src={student.avatar ?? undefined}
             icon={<UserOutlined />}
           />
           <Space direction="vertical" size={0}>
-            <Typography.Text strong>{student.name}</Typography.Text>
-            <Typography.Text type="secondary">
+            <Typography.Text strong ellipsis style={{ maxWidth: 160 }}>
+              {student.name}
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ whiteSpace: "nowrap" }}>
               CPF: {formatCpf(student.cpf)}
             </Typography.Text>
           </Space>
@@ -204,8 +207,13 @@ export default function StudentsPageStudentsList({
     {
       title: "E-mail",
       key: "email",
+      width: 240,
       render: (_: unknown, student) => (
-        <Typography.Text type="secondary">
+        <Typography.Text
+          type="secondary"
+          ellipsis
+          style={{ display: "block", maxWidth: 220, whiteSpace: "nowrap" }}
+        >
           <MailOutlined style={{ marginRight: 6 }} />
           {student.email || "Sem e-mail"}
         </Typography.Text>
@@ -214,7 +222,7 @@ export default function StudentsPageStudentsList({
     {
       title: "WhatsApp",
       key: "whatsapp",
-      width: 140,
+      width: 170,
       render: (_: unknown, student) => {
         const whatsAppUri = buildWhatsAppUri(student.phone);
 
@@ -267,13 +275,13 @@ export default function StudentsPageStudentsList({
     {
       title: "Turmas",
       key: "classes",
-      width: 90,
+      width: 100,
       render: (_: unknown, student) => renderStudentClassesShortcut(student),
     },
     {
       title: "Cadastro",
       key: "registration-status",
-      width: 130,
+      width: 140,
       render: (_: unknown, student) => renderStudentRegistrationTag(student),
     },
     {
@@ -397,7 +405,7 @@ export default function StudentsPageStudentsList({
           dataSource={students}
           columns={desktopColumns}
           pagination={false}
-          scroll={{ x: 1250 }}
+          scroll={{ x: 1510 }}
         />
       )}
 

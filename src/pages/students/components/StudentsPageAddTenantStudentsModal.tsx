@@ -68,10 +68,13 @@ export default function StudentsPageAddTenantStudentsModal({
     {
       title: "Aluno",
       key: "student",
+      width: 260,
       render: (_: unknown, student) => (
-        <Space direction="vertical" size={0}>
-          <Typography.Text strong>{student.name}</Typography.Text>
-          <Typography.Text type="secondary">
+        <Space direction="vertical" size={0} style={{ minWidth: 220 }}>
+          <Typography.Text strong ellipsis style={{ maxWidth: 200 }}>
+            {student.name}
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ whiteSpace: "nowrap" }}>
             CPF: {formatCpf(student.cpf)}
           </Typography.Text>
         </Space>
@@ -81,7 +84,16 @@ export default function StudentsPageAddTenantStudentsModal({
       title: "E-mail",
       dataIndex: "email",
       key: "email",
-      render: (email: string | null | undefined) => email || "Sem e-mail",
+      width: 240,
+      render: (email: string | null | undefined) => (
+        <Typography.Text
+          type="secondary"
+          ellipsis
+          style={{ display: "block", maxWidth: 220, whiteSpace: "nowrap" }}
+        >
+          {email || "Sem e-mail"}
+        </Typography.Text>
+      ),
     },
     {
       title: "Tamanho da camisa",
@@ -187,7 +199,7 @@ export default function StudentsPageAddTenantStudentsModal({
               onChange: onPageChange,
               showSizeChanger: false,
             }}
-            scroll={{ x: 1130 }}
+            scroll={{ x: 1400 }}
             locale={{
               emptyText: "Nenhum aluno encontrado para os filtros informados.",
             }}

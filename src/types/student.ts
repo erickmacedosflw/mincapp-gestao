@@ -7,6 +7,7 @@ export type StudentItem = {
   shirtSize?: string | null
   cellName?: string | null
   leaderName?: string | null
+  network?: string | null
   dateBirth?: string | null
   gender?: string | null
   isMember?: boolean | null

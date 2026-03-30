@@ -108,6 +108,14 @@ export default function StudentsPageAddTenantStudentsModal({
         getOptionalStudentField(leaderName),
     },
     {
+      title: "Rede",
+      dataIndex: "network",
+      key: "network",
+      width: 150,
+      render: (network: string | null | undefined) =>
+        getOptionalStudentField(network),
+    },
+    {
       title: "Status",
       key: "status",
       width: 150,
@@ -179,7 +187,7 @@ export default function StudentsPageAddTenantStudentsModal({
               onChange: onPageChange,
               showSizeChanger: false,
             }}
-            scroll={{ x: 980 }}
+            scroll={{ x: 1130 }}
             locale={{
               emptyText: "Nenhum aluno encontrado para os filtros informados.",
             }}

@@ -692,6 +692,14 @@ export default function InspireStudentsPage() {
         getOptionalStudentField(leaderName),
     },
     {
+      title: "Rede",
+      dataIndex: "network",
+      key: "network",
+      width: 150,
+      render: (network: string | null | undefined) =>
+        getOptionalStudentField(network),
+    },
+    {
       title: "Turmas",
       key: "classes",
       width: 120,
@@ -926,6 +934,9 @@ export default function InspireStudentsPage() {
                           <Typography.Text type="secondary">
                             Líder: {getOptionalStudentField(student.leaderName)}
                           </Typography.Text>
+                          <Typography.Text type="secondary">
+                            Rede: {getOptionalStudentField(student.network)}
+                          </Typography.Text>
                           {renderStudentRegistrationTag(student)}
                           <Space size={6}>
                             {renderStudentClassesShortcut(student)}
@@ -943,7 +954,7 @@ export default function InspireStudentsPage() {
               dataSource={students}
               columns={desktopColumns}
               pagination={false}
-              scroll={{ x: 1100 }}
+              scroll={{ x: 1250 }}
             />
           )}
 

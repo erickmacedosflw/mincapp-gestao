@@ -204,6 +204,9 @@ export default function StudentAcademicLifePage() {
             <Typography.Text type="secondary">Líder</Typography.Text>
             <Typography.Text>{getOptionalStudentField(student.leaderName)}</Typography.Text>
 
+            <Typography.Text type="secondary">Rede</Typography.Text>
+            <Typography.Text>{getOptionalStudentField(student.network)}</Typography.Text>
+
             {contactItems.map((item) => (
               <Space key={item.key} direction="vertical" size={2} style={{ width: '100%' }}>
                 <Typography.Text type="secondary">

@@ -305,7 +305,7 @@ export default function SubjectActivitiesPage() {
     const payload = {
       name: values.name.trim(),
       value: Number(values.value),
-      dateFinish: `${values.finishDate.format("YYYY-MM-DD")}T00:00:00.000Z`,
+      dateFinish: values.finishDate.format("DD/MM/YYYY"),
       subjectId,
     }
 

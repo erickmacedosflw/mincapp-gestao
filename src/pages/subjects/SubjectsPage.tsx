@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   FilterOutlined,
+  FileDoneOutlined,
   PlusOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -216,6 +217,21 @@ export default function SubjectsPage() {
             </Tooltip>
           ) : null}
           {canManageSubjects ? (
+            <Tooltip title="Atividades e Notas">
+              <Button
+                size="small"
+                shape="circle"
+                icon={<FileDoneOutlined />}
+                aria-label="Atividades e Notas"
+                onClick={() =>
+                  navigate(
+                    `/class/${item.classId}/subjects/${item.id}/activities`,
+                  )
+                }
+              />
+            </Tooltip>
+          ) : null}
+          {canManageSubjects ? (
             <Tooltip title="Editar">
               <Button
                 size="small"
@@ -407,6 +423,20 @@ export default function SubjectsPage() {
                                 }
                               >
                                 Presença
+                              </Button>
+                            ) : null,
+                            canManageSubjects ? (
+                              <Button
+                                key={`activities-${item.id}`}
+                                size="small"
+                                icon={<FileDoneOutlined />}
+                                onClick={() =>
+                                  navigate(
+                                    `/class/${item.classId}/subjects/${item.id}/activities`,
+                                  )
+                                }
+                              >
+                                Atividades
                               </Button>
                             ) : null,
                             canManageSubjects ? (

@@ -183,6 +183,88 @@ body,
   overflow-y: clip !important;
 }
 
+.activity-page-header {
+  overflow: hidden;
+}
+
+.activity-page-header::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--ant-color-primary);
+}
+
+.activity-page-heading,
+.activity-grade-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.activity-grade-toolbar {
+  margin-bottom: 16px;
+}
+
+.activity-page-icon {
+  color: var(--ant-color-primary);
+  font-size: 22px;
+}
+
+.activity-column-heading {
+  min-width: 184px;
+  padding: 4px 0;
+  text-align: left;
+}
+
+.activity-grade-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 132px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--ant-border-radius-lg);
+  background: color-mix(in srgb, var(--field-bg) 70%, transparent);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.activity-grade-cell--changed {
+  border-color: var(--ant-color-warning-border);
+  background: var(--ant-color-warning-bg);
+}
+
+.activity-grade-cell--invalid {
+  border-color: var(--ant-color-error-border);
+  background: var(--ant-color-error-bg);
+}
+
+.activity-grades-table .ant-table-container,
+.activity-grades-table .ant-table-content,
+.activity-grades-table .ant-table-body {
+  overflow-y: clip !important;
+}
+
+.activity-grades-table .ant-table-thead > tr > th {
+  vertical-align: top;
+}
+
+@media (max-width: 767px) {
+  .activity-page-heading,
+  .activity-grade-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .activity-page-heading > .ant-space,
+  .activity-grade-toolbar > .ant-input-affix-wrapper,
+  .activity-grade-toolbar > .ant-btn {
+    width: 100%;
+    max-width: none !important;
+  }
+}
+
 .academic-report-filter-card {
   border-color: var(--ant-color-border-secondary);
 }

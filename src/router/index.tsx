@@ -18,6 +18,7 @@ import SubjectsPage from "../pages/subjects/SubjectsPage";
 import SubjectCreatePage from "../pages/subjects/SubjectCreatePage";
 import SubjectEditPage from "../pages/subjects/SubjectEditPage";
 import SubjectAttendancePage from "../pages/subjects/SubjectAttendancePage";
+import SubjectActivitiesPage from "../pages/subjects/SubjectActivitiesPage";
 import StudentsPage from "../pages/students/StudentsPage";
 import InspireStudentsPage from "../pages/students/InspireStudentsPage";
 import StudentAcademicLifePage from "../pages/students/StudentAcademicLifePage";
@@ -163,6 +164,14 @@ export const appRouter = createBrowserRouter([
         element: (
           <PermissionRoute permissions={[ADMIN_PERMISSIONS.gerenciarPresencas]}>
             <SubjectAttendancePage />
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: "class/:classId/subjects/:subjectId/activities",
+        element: (
+          <PermissionRoute permissions={[ADMIN_PERMISSIONS.gerenciarMaterias]}>
+            <SubjectActivitiesPage />
           </PermissionRoute>
         ),
       },

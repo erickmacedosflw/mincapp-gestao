@@ -1,3 +1,5 @@
+import type { SubjectActivityItem } from './activity'
+
 export type SubjectItem = {
   id: string
   name: string
@@ -45,7 +47,7 @@ export type SubjectCallTypeItem = {
 }
 
 export type SubjectDetailsItem = SubjectItem & {
-  activities: unknown[]
+  activities: SubjectActivityItem[]
   callTypes: SubjectCallTypeItem[]
   weekDays: SubjectWeekDayItem[]
   callExceptions: SubjectCallExceptionItem[]

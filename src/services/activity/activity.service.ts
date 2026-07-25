@@ -1,105 +1,42 @@
 import { AxiosError } from "axios"
-import { getTenantSelection } from "../auth/token.storage"
 import { apiClient } from "../api/client"
 import type {
   ActivityFormPayload,
-  ActivityGradeUpdateItem,
   ActivityStudentGradeItem,
+  GradeFormPayload,
   SubjectActivityItem,
 } from "../../types/activity"
+import { assertValidUuid } from "../../utils/uuid"
 
 type ApiError = {
   message?: string
 }
-
-type ActivityListResponse =
-  | SubjectActivityItem[]
-  | {
-      data?: SubjectActivityItem[]
-      activities?: SubjectActivityItem[]
-    }
-
-type ActivityGradesResponse =
-  | ActivityStudentGradeItem[]
-  | {
-      data?: ActivityStudentGradeItem[]
-      students?: ActivityStudentGradeItem[]
-    }
 
 function resolveApiErrorMessage(error: unknown, fallbackMessage: string) {
   const axiosError = error as AxiosError<ApiError>
   return axiosError.response?.data?.message ?? fallbackMessage
 }
 
-function educationTenantHeaders() {
-  return {
-    "x-education-tenant": getTenantSelection(),
-  }
+function validateActivityPayload(payload: ActivityFormPayload) {
+  assertValidUuid(payload.subjectId, "Matéria")
 }
 
-function normalizeActivityList(
-  response: ActivityListResponse,
-): SubjectActivityItem[] {
-  if (Array.isArray(response)) {
-    return response
-  }
+function validateGradePayload(payload: GradeFormPayload) {
+  assertValidUuid(payload.activityId, "Atividade")
+  assertValidUuid(payload.studentId, "Aluno")
 
-  if (Array.isArray(response.data)) {
-    return response.data
-  }
-
-  if (Array.isArray(response.activities)) {
-    return response.activities
-  }
-
-  return []
-}
-
-function normalizeActivityGrades(
-  response: ActivityGradesResponse,
-): ActivityStudentGradeItem[] {
-  if (Array.isArray(response)) {
-    return response
-  }
-
-  if (Array.isArray(response.data)) {
-    return response.data
-  }
-
-  if (Array.isArray(response.students)) {
-    return response.students
-  }
-
-  return []
-}
-
-export async function getSubjectActivities(subjectId: string) {
-  try {
-    const response = await apiClient.get<ActivityListResponse>(
-      "/admin/activities",
-      {
-        headers: educationTenantHeaders(),
-        params: { subjectId },
-      },
-    )
-
-    return normalizeActivityList(response.data)
-  } catch (error) {
-    throw new Error(
-      resolveApiErrorMessage(
-        error,
-        "Não foi possível carregar as atividades da matéria.",
-      ),
-    )
+  if (!Number.isFinite(payload.grade) || payload.grade < 0) {
+    throw new Error("A nota deve ser um número maior ou igual a zero.")
   }
 }
 
 export async function createActivity(payload: ActivityFormPayload) {
+  validateActivityPayload(payload)
+
   try {
     const response = await apiClient.post<SubjectActivityItem>(
-      "/admin/activities",
+      "/activity",
       payload,
-      { headers: educationTenantHeaders() },
     )
     return response.data
   } catch (error) {
@@ -113,11 +50,13 @@ export async function updateActivity(
   activityId: string,
   payload: ActivityFormPayload,
 ) {
+  assertValidUuid(activityId, "Atividade")
+  validateActivityPayload(payload)
+
   try {
     const response = await apiClient.put<SubjectActivityItem>(
-      `/admin/activities/${activityId}`,
+      `/activity/${activityId}`,
       payload,
-      { headers: educationTenantHeaders() },
     )
     return response.data
   } catch (error) {
@@ -128,10 +67,10 @@ export async function updateActivity(
 }
 
 export async function deleteActivity(activityId: string) {
+  assertValidUuid(activityId, "Atividade")
+
   try {
-    await apiClient.delete(`/admin/activities/${activityId}`, {
-      headers: educationTenantHeaders(),
-    })
+    await apiClient.delete(`/activity/${activityId}`)
   } catch (error) {
     throw new Error(
       resolveApiErrorMessage(error, "Não foi possível excluir a atividade."),
@@ -139,40 +78,50 @@ export async function deleteActivity(activityId: string) {
   }
 }
 
-export async function getActivityGrades(activityId: string) {
-  try {
-    const response = await apiClient.get<ActivityGradesResponse>(
-      `/admin/activities/${activityId}/grades`,
-      { headers: educationTenantHeaders() },
-    )
+export async function createGrade(payload: GradeFormPayload) {
+  validateGradePayload(payload)
 
-    return normalizeActivityGrades(response.data)
+  try {
+    const response = await apiClient.post<ActivityStudentGradeItem>(
+      "/grade",
+      payload,
+    )
+    return response.data
   } catch (error) {
     throw new Error(
-      resolveApiErrorMessage(
-        error,
-        "Não foi possível carregar as notas da atividade.",
-      ),
+      resolveApiErrorMessage(error, "Não foi possível lançar a nota."),
     )
   }
 }
 
-export async function updateActivityGrades(
-  activityId: string,
-  grades: ActivityGradeUpdateItem[],
+export async function updateGrade(
+  gradeId: string,
+  payload: GradeFormPayload,
 ) {
+  assertValidUuid(gradeId, "Nota")
+  validateGradePayload(payload)
+
   try {
-    await apiClient.put(
-      `/admin/activities/${activityId}/grades`,
-      { grades },
-      { headers: educationTenantHeaders() },
+    const response = await apiClient.put<ActivityStudentGradeItem>(
+      `/grade/${gradeId}`,
+      payload,
     )
+    return response.data
   } catch (error) {
     throw new Error(
-      resolveApiErrorMessage(
-        error,
-        "Não foi possível salvar as notas da atividade.",
-      ),
+      resolveApiErrorMessage(error, "Não foi possível atualizar a nota."),
+    )
+  }
+}
+
+export async function deleteGrade(gradeId: string) {
+  assertValidUuid(gradeId, "Nota")
+
+  try {
+    await apiClient.delete(`/grade/${gradeId}`)
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível remover a nota."),
     )
   }
 }

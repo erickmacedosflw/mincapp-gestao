@@ -38,11 +38,11 @@ import { Link, useNavigate, useParams } from "react-router-dom"
 import AppDialog from "../../components/feedback/AppDialog"
 import {
   createActivity,
+  createGrade,
   deleteActivity,
-  getActivityGrades,
-  getSubjectActivities,
+  deleteGrade,
   updateActivity,
-  updateActivityGrades,
+  updateGrade,
 } from "../../services/activity/activity.service"
 import {
   getClassById,
@@ -53,6 +53,7 @@ import type { SubjectActivityItem } from "../../types/activity"
 import type { ClassItem, ClassStudentAttendanceItem } from "../../types/class"
 import type { SubjectDetailsItem } from "../../types/subject"
 import { toPeriodLabel } from "../../utils/date"
+import { isValidUuid } from "../../utils/uuid"
 
 dayjs.extend(customParseFormat)
 
@@ -100,8 +101,8 @@ function formatActivityDate(value: string) {
 function sortActivities(items: SubjectActivityItem[]) {
   return [...items].sort(
     (left, right) =>
-      parseActivityDate(left.finishDate).valueOf() -
-      parseActivityDate(right.finishDate).valueOf(),
+      parseActivityDate(left.dateFinish).valueOf() -
+      parseActivityDate(right.dateFinish).valueOf(),
   )
 }
 
@@ -123,6 +124,7 @@ export default function SubjectActivitiesPage() {
   const [initialGrades, setInitialGrades] = useState<Record<string, GradeValue>>(
     {},
   )
+  const [gradeIds, setGradeIds] = useState<Record<string, string | null>>({})
   const [grades, setGrades] = useState<Record<string, GradeValue>>({})
   const [search, setSearch] = useState("")
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false)
@@ -139,6 +141,12 @@ export default function SubjectActivitiesPage() {
         return
       }
 
+      if (!isValidUuid(classId) || !isValidUuid(subjectId)) {
+        setErrorMessage("Turma ou matéria inválida.")
+        setLoading(false)
+        return
+      }
+
       try {
         if (isRefresh) {
           setRefreshing(true)
@@ -148,13 +156,11 @@ export default function SubjectActivitiesPage() {
 
         setErrorMessage(null)
 
-        const [classData, subjectData, classStudents, activityData] =
-          await Promise.all([
-            getClassById(classId),
-            getSubjectById(subjectId),
-            getEducationClassStudents(classId),
-            getSubjectActivities(subjectId),
-          ])
+        const [classData, subjectData, classStudents] = await Promise.all([
+          getClassById(classId),
+          getSubjectById(subjectId),
+          getEducationClassStudents(classId),
+        ])
 
         if (!classData) {
           setErrorMessage("Turma não encontrada.")
@@ -163,27 +169,26 @@ export default function SubjectActivitiesPage() {
 
         const safeStudents = Array.isArray(classStudents) ? classStudents : []
         const sortedActivities = sortActivities(
-          Array.isArray(activityData) ? activityData : [],
-        )
-
-        const gradesByActivity = await Promise.all(
-          sortedActivities.map(async (activity) => ({
-            activity,
-            students: await getActivityGrades(activity.id),
-          })),
+          Array.isArray(subjectData.activities) ? subjectData.activities : [],
         )
         const nextGrades: Record<string, GradeValue> = {}
+        const nextGradeIds: Record<string, string | null> = {}
 
         sortedActivities.forEach((activity) => {
           safeStudents.forEach((student) => {
-            nextGrades[getGradeKey(student.id, activity.id)] = null
+            const gradeKey = getGradeKey(student.id, activity.id)
+            nextGrades[gradeKey] = null
+            nextGradeIds[gradeKey] = null
           })
-        })
 
-        gradesByActivity.forEach(({ activity, students: gradeStudents }) => {
-          gradeStudents.forEach((student) => {
-            nextGrades[getGradeKey(student.studentId, activity.id)] =
-              normalizeNumber(student.grade)
+          const studentGrades = Array.isArray(activity.studentGrades)
+            ? activity.studentGrades
+            : []
+
+          studentGrades.forEach((studentGrade) => {
+            const gradeKey = getGradeKey(studentGrade.studentId, activity.id)
+            nextGrades[gradeKey] = normalizeNumber(studentGrade.grade)
+            nextGradeIds[gradeKey] = studentGrade.id
           })
         })
 
@@ -192,6 +197,7 @@ export default function SubjectActivitiesPage() {
         setStudents(safeStudents)
         setActivities(sortedActivities)
         setInitialGrades(nextGrades)
+        setGradeIds(nextGradeIds)
         setGrades(nextGrades)
       } catch (error) {
         setErrorMessage(
@@ -274,7 +280,7 @@ export default function SubjectActivitiesPage() {
       form.setFieldsValue({
         name: activity.name,
         value: Number(activity.value),
-        finishDate: parseActivityDate(activity.finishDate),
+        finishDate: parseActivityDate(activity.dateFinish),
       })
       setIsActivityModalOpen(true)
     },
@@ -299,7 +305,7 @@ export default function SubjectActivitiesPage() {
     const payload = {
       name: values.name.trim(),
       value: Number(values.value),
-      finishDate: values.finishDate.format("DD/MM/YYYY"),
+      dateFinish: `${values.finishDate.format("YYYY-MM-DD")}T00:00:00.000Z`,
       subjectId,
     }
 
@@ -356,29 +362,40 @@ export default function SubjectActivitiesPage() {
       return
     }
 
-    const changesByActivity = new Map<
-      string,
-      Array<{ studentId: string; grade: number | null }>
-    >()
-
-    changedGradeKeys.forEach((key) => {
-      const [studentId, activityId] = key.split("::")
-      const currentChanges = changesByActivity.get(activityId) ?? []
-      currentChanges.push({
-        studentId,
-        grade: normalizeNumber(grades[key]),
-      })
-      changesByActivity.set(activityId, currentChanges)
-    })
-
     try {
       setSavingGrades(true)
-      await Promise.all(
-        [...changesByActivity.entries()].map(([activityId, activityGrades]) =>
-          updateActivityGrades(activityId, activityGrades),
-        ),
+
+      const results = await Promise.allSettled(
+        changedGradeKeys.map((key) => {
+          const [studentId, activityId] = key.split("::")
+          const grade = normalizeNumber(grades[key])
+          const gradeId = gradeIds[key]
+          const initialGrade = normalizeNumber(initialGrades[key])
+
+          if (initialGrade !== null && !gradeId) {
+            throw new Error(
+              "Não foi possível identificar a nota que deve ser alterada.",
+            )
+          }
+
+          if (grade === null) {
+            return gradeId ? deleteGrade(gradeId) : Promise.resolve()
+          }
+
+          const payload = { grade, activityId, studentId }
+          return gradeId
+            ? updateGrade(gradeId, payload)
+            : createGrade(payload)
+        }),
       )
-      setInitialGrades({ ...grades })
+
+      const failedResult = results.find((result) => result.status === "rejected")
+      await loadData(true)
+
+      if (failedResult?.status === "rejected") {
+        throw failedResult.reason
+      }
+
       message.success("Notas salvas com sucesso.")
     } catch (error) {
       message.error(
@@ -456,7 +473,7 @@ export default function SubjectActivitiesPage() {
                 </Tag>
                 <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                   <CalendarOutlined style={{ marginRight: 4 }} />
-                  {formatActivityDate(activity.finishDate)}
+                  {formatActivityDate(activity.dateFinish)}
                 </Typography.Text>
               </Space>
             </Space>

@@ -32,6 +32,7 @@ apiClient.interceptors.request.use((config) => {
   }
 
   config.headers['x-tenant-id'] = tenant
+  config.headers['x-education-tenant'] = tenant
 
   return config
 })

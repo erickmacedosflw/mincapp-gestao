@@ -183,6 +183,269 @@ body,
   overflow-y: clip !important;
 }
 
+.academic-report-filter-card {
+  border-color: var(--ant-color-border-secondary);
+}
+
+.academic-report-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(190px, auto);
+  gap: 12px;
+  align-items: end;
+}
+
+.academic-report-filters .ant-form-item {
+  margin-bottom: 0;
+}
+
+.academic-report-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.academic-report-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+  overflow-x: auto;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg);
+  background: color-mix(in srgb, var(--screen-bg) 80%, #7b8493 20%);
+}
+
+.academic-report-page {
+  --report-ink: #17202b;
+  --report-muted: #647080;
+  --report-accent: #1d5c45;
+  --report-soft: #edf5f1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(210mm, 100%);
+  min-height: 297mm;
+  padding: 17mm 16mm 14mm;
+  color: var(--report-ink);
+  background: #fff;
+  box-shadow: 0 18px 50px rgb(28 39 53 / 16%);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.academic-report-page-header {
+  display: grid;
+  grid-template-columns: 104px 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--report-ink);
+}
+
+.academic-report-logo {
+  width: 96px;
+  height: 48px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.academic-report-eyebrow {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--report-accent);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.academic-report-page h2,
+.academic-report-page h3,
+.academic-report-page h4,
+.academic-report-page p {
+  margin: 0;
+}
+
+.academic-report-page h2 {
+  font-size: 25px;
+  line-height: 1.1;
+}
+
+.academic-report-page-number {
+  align-self: start;
+  color: var(--report-muted);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 10px;
+}
+
+.academic-report-student-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(130px, 1fr) minmax(130px, 1fr);
+  gap: 18px;
+  padding: 18px 0;
+}
+
+.academic-report-student-summary div,
+.academic-report-class-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.academic-report-student-summary span,
+.academic-report-class-title > span {
+  color: var(--report-muted);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.academic-report-student-summary strong {
+  font-size: 13px;
+}
+
+.academic-report-class-summary {
+  padding: 16px 18px;
+  border-left: 4px solid var(--report-accent);
+  background: var(--report-soft);
+}
+
+.academic-report-class-title h3 {
+  font-size: 21px;
+}
+
+.academic-report-class-details {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 16px;
+  margin-top: 15px;
+}
+
+.academic-report-class-details > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.academic-report-class-details > div > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.academic-report-class-details small {
+  color: var(--report-muted);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 9px;
+}
+
+.academic-report-class-details strong {
+  font-size: 11px;
+}
+
+.academic-report-class-summary p {
+  margin-top: 12px;
+  color: var(--report-muted);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 10px;
+}
+
+.academic-report-subjects {
+  margin-top: 22px;
+}
+
+.academic-report-subjects-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.academic-report-subjects-heading h4 {
+  font-size: 16px;
+}
+
+.academic-report-subjects-heading span {
+  color: var(--report-muted);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 10px;
+}
+
+.academic-report-subject-list {
+  border-top: 1px solid #cdd4dc;
+}
+
+.academic-report-subject-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.7fr) minmax(150px, 1.5fr) minmax(78px, 0.7fr) minmax(105px, 0.9fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 54px;
+  padding: 9px 8px;
+  border-bottom: 1px solid #dfe4e9;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.academic-report-subject-row:nth-child(odd):not(.academic-report-subject-labels) {
+  background: #f8faf9;
+}
+
+.academic-report-subject-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.academic-report-subject-row strong {
+  overflow-wrap: anywhere;
+  font-size: 10px;
+}
+
+.academic-report-subject-row span {
+  color: var(--report-muted);
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.academic-report-subject-labels {
+  min-height: auto;
+  padding-block: 7px;
+  color: #fff;
+  background: var(--report-ink);
+}
+
+.academic-report-subject-labels span {
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.academic-report-empty-subjects {
+  padding: 28px;
+  border: 1px dashed #cdd4dc;
+  color: var(--report-muted);
+  text-align: center;
+}
+
+.academic-report-page-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #dfe4e9;
+  color: var(--report-muted);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 8px;
+}
+
 [data-theme-mode='dark'] .app-brand-logo,
 [data-theme-mode='dark'] .login-logo {
   filter: brightness(0) invert(1);
@@ -199,5 +462,58 @@ body,
 
   .login-page {
     padding: 16px;
+  }
+
+  .academic-report-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .academic-report-pages {
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .academic-report-page {
+    width: 210mm;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .academic-report-pages,
+  .academic-report-pages * {
+    visibility: visible;
+  }
+
+  .academic-report-pages {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: #fff;
+  }
+
+  .academic-report-page {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    overflow: hidden;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .academic-report-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }

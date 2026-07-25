@@ -3,6 +3,7 @@ import {
   BookOutlined,
   CalendarOutlined,
   EnvironmentOutlined,
+  FileTextOutlined,
   MailOutlined,
   ReadOutlined,
   SafetyOutlined,
@@ -14,6 +15,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getStudentById } from '../../services/student/student.service'
 import type { StudentAvailableClassItem, StudentItem } from '../../types/student'
+import StudentAcademicReport from './components/StudentAcademicReport'
 
 function formatCpf(value: string) {
   const digits = value.replace(/\D/g, '')
@@ -83,6 +85,7 @@ export default function StudentAcademicLifePage() {
   const { studentId } = useParams()
   const [searchParams] = useSearchParams()
   const [classesTab, setClassesTab] = useState<'active' | 'closed'>('active')
+  const [academicSection, setAcademicSection] = useState<'classes' | 'report'>('classes')
   const [mobileMenu, setMobileMenu] = useState<'student' | 'academic'>('academic')
   const classId = searchParams.get('classId')
 
@@ -256,52 +259,62 @@ export default function StudentAcademicLifePage() {
 
         <Menu
           mode="horizontal"
-          selectedKeys={['classes']}
+          selectedKeys={[academicSection]}
+          onClick={({ key }) => setAcademicSection(key as 'classes' | 'report')}
           items={[
             {
               key: 'classes',
               icon: <ReadOutlined />,
               label: 'Turmas',
             },
+            {
+              key: 'report',
+              icon: <FileTextOutlined />,
+              label: 'Boletim',
+            },
           ]}
         />
 
-        <Space direction="vertical" size={10} style={{ width: '100%' }}>
-          <Tabs
-            activeKey={classesTab}
-            onChange={(key) => setClassesTab(key as 'active' | 'closed')}
-            items={[
-              {
-                key: 'active',
-                label: `Em andamento (${student.subscriptions.length})`,
-                children:
-                  student.subscriptions.length === 0 ? (
-                    <Typography.Text type="secondary">Nenhuma turma em andamento.</Typography.Text>
-                  ) : (
-                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                      {student.subscriptions.map((item) => (
-                        <SubscriptionCard key={item.id} item={item} />
-                      ))}
-                    </Space>
-                  ),
-              },
-              {
-                key: 'closed',
-                label: `Encerradas (${student.previousSubscriptions.length})`,
-                children:
-                  student.previousSubscriptions.length === 0 ? (
-                    <Typography.Text type="secondary">Nenhuma turma encerrada no histórico.</Typography.Text>
-                  ) : (
-                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                      {student.previousSubscriptions.map((item) => (
-                        <SubscriptionCard key={item.id} item={item} />
-                      ))}
-                    </Space>
-                  ),
-              },
-            ]}
-          />
-        </Space>
+        {academicSection === 'classes' ? (
+          <Space direction="vertical" size={10} style={{ width: '100%' }}>
+            <Tabs
+              activeKey={classesTab}
+              onChange={(key) => setClassesTab(key as 'active' | 'closed')}
+              items={[
+                {
+                  key: 'active',
+                  label: `Em andamento (${student.subscriptions.length})`,
+                  children:
+                    student.subscriptions.length === 0 ? (
+                      <Typography.Text type="secondary">Nenhuma turma em andamento.</Typography.Text>
+                    ) : (
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        {student.subscriptions.map((item) => (
+                          <SubscriptionCard key={item.id} item={item} />
+                        ))}
+                      </Space>
+                    ),
+                },
+                {
+                  key: 'closed',
+                  label: `Encerradas (${student.previousSubscriptions.length})`,
+                  children:
+                    student.previousSubscriptions.length === 0 ? (
+                      <Typography.Text type="secondary">Nenhuma turma encerrada no histórico.</Typography.Text>
+                    ) : (
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        {student.previousSubscriptions.map((item) => (
+                          <SubscriptionCard key={item.id} item={item} />
+                        ))}
+                      </Space>
+                    ),
+                },
+              ]}
+            />
+          </Space>
+        ) : (
+          <StudentAcademicReport initialCpf={student.cpf} />
+        )}
       </Space>
     </Card>
   )

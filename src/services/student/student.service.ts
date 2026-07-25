@@ -1,5 +1,13 @@
+import { AxiosError } from 'axios'
 import { apiClient } from '../api/client'
-import type { StudentDetailsResponse, StudentsListResponse, StudentListType } from '../../types/student'
+import { getTenantSelection } from '../auth/token.storage'
+import type {
+  StudentAcademicReportParams,
+  StudentAcademicReportResponse,
+  StudentDetailsResponse,
+  StudentsListResponse,
+  StudentListType,
+} from '../../types/student'
 
 type GetStudentsParams = {
   classId?: string
@@ -7,6 +15,10 @@ type GetStudentsParams = {
   perPage: number
   search?: string
   type?: StudentListType
+}
+
+type ApiError = {
+  message?: string
 }
 
 export async function getStudentsByClassId({ classId, page, perPage, search, type }: GetStudentsParams) {
@@ -70,4 +82,35 @@ export async function getStudentById(studentId: string) {
   })
 
   return response.data
+}
+
+export async function getStudentAcademicReport({
+  cpf,
+  classTypeId,
+  classTypeName,
+}: StudentAcademicReportParams) {
+  try {
+    const tenant = getTenantSelection()
+    const response = await apiClient.get<StudentAcademicReportResponse>(
+      '/admin/reports/student-academic',
+      {
+        headers: {
+          'x-education-tenant': tenant,
+        },
+        params: {
+          cpf,
+          classTypeId: classTypeId || undefined,
+          classTypeName: classTypeId ? undefined : classTypeName || undefined,
+        },
+      },
+    )
+
+    return response.data
+  } catch (error) {
+    const axiosError = error as AxiosError<ApiError>
+    throw new Error(
+      axiosError.response?.data?.message ??
+        'Não foi possível carregar o boletim acadêmico do aluno.',
+    )
+  }
 }

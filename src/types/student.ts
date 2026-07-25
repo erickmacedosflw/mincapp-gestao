@@ -66,3 +66,45 @@ export type StudentsListResponse = {
   }
   data: StudentItem[]
 }
+
+export type StudentAcademicReportStudent = {
+  name: string
+  cpf: string
+  email?: string | null
+  phone?: string | null
+  dateBirth?: string | null
+}
+
+export type StudentAcademicReportSubject = {
+  name: string
+  teacherName?: string | null
+  initDate?: string | null
+  finishDate?: string | null
+  daysOfWeek?: string[] | null
+  totalGrade: number | null
+  totalValue?: number | null
+  presentCalls?: number | null
+  expectedCalls?: number | null
+  attendancePercentage: number | null
+}
+
+export type StudentAcademicReportClass = {
+  name: string
+  type?: string | { name?: string | null } | null
+  initDate?: string | null
+  finishDate?: string | null
+  enrollmentDate?: string | null
+  daysOfWeek?: string[] | null
+  subjects: StudentAcademicReportSubject[]
+}
+
+export type StudentAcademicReportResponse = {
+  student: StudentAcademicReportStudent
+  classes: StudentAcademicReportClass[]
+}
+
+export type StudentAcademicReportParams = {
+  cpf: string
+  classTypeId?: string
+  classTypeName?: string
+}

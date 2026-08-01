@@ -313,6 +313,16 @@ export default function ClassManagementPage() {
                   <Tag color={statusColor}>{statusLabel}</Tag>
                 </Space>
 
+                {(classData.tags ?? []).length > 0 ? (
+                  <Space size={[4, 4]} wrap>
+                    {(classData.tags ?? []).map((tag) => (
+                      <Tag key={tag.id} color="geekblue">
+                        {tag.description}
+                      </Tag>
+                    ))}
+                  </Space>
+                ) : null}
+
                 <Space size={8}>
                   <ClockCircleOutlined />
                   <Typography.Text type="secondary">

@@ -55,6 +55,7 @@ export default function ClassCreatePage() {
         subscriptionEndDate: pendingValues.subscriptionEndDate?.format('DD/MM/YYYY') || undefined,
         campusId: pendingValues.campusId,
         classTypeId: pendingValues.classTypeId || undefined,
+        tagIds: pendingValues.tagIds ?? [],
       })
 
       message.success('Turma criada com sucesso.')

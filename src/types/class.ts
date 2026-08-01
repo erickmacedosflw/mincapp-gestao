@@ -2,6 +2,11 @@ import type { CampusItem } from './campus'
 import type { ClassTypeItem } from './class-type'
 import type { StudentItem } from './student'
 
+export type ClassTag = {
+  id: string
+  description: string
+}
+
 export type ClassItem = {
   id: string
   name: string
@@ -12,14 +17,28 @@ export type ClassItem = {
   campus?: CampusItem | null
   classTypeId?: string | null
   classType?: ClassTypeItem | null
+  tags?: ClassTag[]
   students?: StudentItem[]
   createdAt: string
   updatedAt: string
 }
 
 export type ClassFilters = {
+  page?: number
+  perPage?: number
+  search?: string
   campusId?: string
   classTypeId?: string
+  tagIds?: string[]
+  initDate?: string
+  finishDate?: string
+}
+
+export type ClassesListResponse = {
+  page: number
+  perPage: number
+  total: number
+  data: ClassItem[]
 }
 
 export type CreateClassPayload = {
@@ -29,12 +48,17 @@ export type CreateClassPayload = {
   subscriptionEndDate?: string
   campusId: string
   classTypeId?: string
+  tagIds?: string[]
 }
 
 export type UpdateClassPayload = CreateClassPayload
 
 export type DeleteClassResponse = {
   id: string
+}
+
+export type ClassTagPayload = {
+  description: string
 }
 
 export type ClassStudentAttendanceItem = {

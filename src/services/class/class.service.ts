@@ -3,6 +3,9 @@ import { apiClient } from "../api/client";
 import type {
   ClassFilters,
   ClassItem,
+  ClassesListResponse,
+  ClassTag,
+  ClassTagPayload,
   CreateClassPayload,
   DeleteClassResponse,
   EducationClassResponse,
@@ -18,6 +21,63 @@ function resolveApiErrorMessage(error: unknown, fallbackMessage: string) {
   return axiosError.response?.data?.message ?? fallbackMessage;
 }
 
+type ClassesApiResponse =
+  | ClassItem[]
+  | ClassesListResponse
+  | {
+      data: ClassItem[]
+      page?: number
+      perPage?: number
+      total?: number
+    };
+
+function normalizeClassesResponse(
+  response: ClassesApiResponse,
+  filters?: ClassFilters,
+): ClassesListResponse {
+  if (Array.isArray(response)) {
+    return {
+      page: filters?.page ?? 1,
+      perPage: filters?.perPage ?? response.length,
+      total: response.length,
+      data: response.map((item) => ({ ...item, tags: item.tags ?? [] })),
+    };
+  }
+
+  return {
+    page: response.page ?? filters?.page ?? 1,
+    perPage: response.perPage ?? filters?.perPage ?? response.data.length,
+    total: response.total ?? response.data.length,
+    data: response.data.map((item) => ({ ...item, tags: item.tags ?? [] })),
+  };
+}
+
+export async function getClassesPage(filters?: ClassFilters) {
+  try {
+    const response = await apiClient.get<ClassesApiResponse>("/class", {
+      params: {
+        page: filters?.page ?? 1,
+        perPage: filters?.perPage ?? 10,
+        search: filters?.search || undefined,
+        campusId: filters?.campusId || undefined,
+        classTypeId: filters?.classTypeId || undefined,
+        tagIds: filters?.tagIds?.length ? filters.tagIds : undefined,
+        initDate: filters?.initDate || undefined,
+        finishDate: filters?.finishDate || undefined,
+      },
+      paramsSerializer: {
+        indexes: null,
+      },
+    });
+
+    return normalizeClassesResponse(response.data, filters);
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível carregar as turmas."),
+    );
+  }
+}
+
 export async function getClasses(filters?: ClassFilters | string) {
   const normalizedFilters =
     typeof filters === "string"
@@ -26,30 +86,34 @@ export async function getClasses(filters?: ClassFilters | string) {
         }
       : filters;
 
-  try {
-    const response = await apiClient.get<ClassItem[]>("/class", {
-      params: {
-        ...(normalizedFilters?.campusId
-          ? { campusId: normalizedFilters.campusId }
-          : {}),
-        ...(normalizedFilters?.classTypeId
-          ? { classTypeId: normalizedFilters.classTypeId }
-          : {}),
-      },
+  const perPage = normalizedFilters?.perPage ?? 100;
+  let page = 1;
+  let total = 0;
+  let collected: ClassItem[] = [];
+
+  do {
+    const response = await getClassesPage({
+      ...normalizedFilters,
+      page,
+      perPage,
     });
 
-    return response.data;
-  } catch (error) {
-    throw new Error(
-      resolveApiErrorMessage(error, "Não foi possível carregar as turmas."),
-    );
-  }
+    total = response.total;
+    collected = [...collected, ...response.data];
+    page += 1;
+
+    if (response.data.length === 0) {
+      break;
+    }
+  } while (collected.length < total);
+
+  return collected;
 }
 
 export async function getClassById(classId: string) {
   try {
     const response = await apiClient.get<ClassItem>(`/class/${classId}`);
-    return response.data;
+    return { ...response.data, tags: response.data.tags ?? [] };
   } catch (error) {
     const axiosError = error as AxiosError<ApiError>;
 
@@ -59,6 +123,71 @@ export async function getClassById(classId: string) {
 
     throw new Error(
       resolveApiErrorMessage(error, "Não foi possível carregar a turma."),
+    );
+  }
+}
+
+export async function getClassTags() {
+  try {
+    const response = await apiClient.get<ClassTag[] | { data: ClassTag[] }>(
+      "/class/tag",
+    );
+    return Array.isArray(response.data) ? response.data : response.data.data;
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível carregar as tags."),
+    );
+  }
+}
+
+export async function createClassTag(payload: ClassTagPayload) {
+  try {
+    const response = await apiClient.post<ClassTag>("/class/tag", payload);
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível criar a tag."),
+    );
+  }
+}
+
+export async function updateClassTag(
+  tagId: string,
+  payload: ClassTagPayload,
+) {
+  try {
+    const response = await apiClient.put<ClassTag>(
+      `/class/tag/${tagId}`,
+      payload,
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível renomear a tag."),
+    );
+  }
+}
+
+export async function deleteClassTag(tagId: string) {
+  try {
+    await apiClient.delete(`/class/tag/${tagId}`);
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível excluir a tag."),
+    );
+  }
+}
+
+export async function replaceClassTags(classId: string, tagIds: string[]) {
+  try {
+    const response = await apiClient.put<ClassItem>(
+      `/class/${classId}/tags`,
+      { tagIds },
+    );
+    return { ...response.data, tags: response.data.tags ?? [] };
+  } catch (error) {
+    throw new Error(
+      resolveApiErrorMessage(error, "Não foi possível atualizar as tags da turma."),
     );
   }
 }

@@ -47,6 +47,7 @@ export default function ClassEditPage() {
           subscriptionEndDate: toDayjs(foundClass.subscriptionEndDate) ?? undefined,
           campusId: foundClass.campusId,
           classTypeId: foundClass.classTypeId ?? undefined,
+          tagIds: (foundClass.tags ?? []).map((tag) => tag.id),
         })
       } catch (error) {
         const nextMessage = error instanceof Error ? error.message : 'Não foi possível carregar a turma.'
@@ -82,6 +83,7 @@ export default function ClassEditPage() {
         subscriptionEndDate: pendingValues.subscriptionEndDate?.format('DD/MM/YYYY') || undefined,
         campusId: pendingValues.campusId,
         classTypeId: pendingValues.classTypeId || undefined,
+        tagIds: pendingValues.tagIds ?? [],
       })
 
       message.success('Turma atualizada com sucesso.')

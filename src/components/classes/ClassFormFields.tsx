@@ -8,6 +8,8 @@ import { getClassTypes } from '../../services/class/class-type.service'
 import { useAdminAccess } from '../../access/use-admin-access'
 import type { CampusItem } from '../../types/campus'
 import type { ClassTypeItem } from '../../types/class-type'
+import { useQuery } from '@tanstack/react-query'
+import { getClassTags } from '../../services/class/class.service'
 
 export type ClassFormValues = {
   name: string
@@ -15,6 +17,7 @@ export type ClassFormValues = {
   subscriptionEndDate?: Dayjs | null
   campusId: string
   classTypeId?: string
+  tagIds?: string[]
 }
 
 type ClassFormFieldsProps = {
@@ -27,6 +30,10 @@ export default function ClassFormFields({ form }: ClassFormFieldsProps) {
   const [classTypes, setClassTypes] = useState<ClassTypeItem[]>([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const tagsQuery = useQuery({
+    queryKey: ['class-tags'],
+    queryFn: getClassTags,
+  })
 
   useEffect(() => {
     async function loadOptions() {
@@ -154,6 +161,35 @@ export default function ClassFormFields({ form }: ClassFormFieldsProps) {
           placeholder="Selecione a data"
         />
       </Form.Item>
+
+      <Form.Item
+        label="Tags"
+        name="tagIds"
+        extra="Use tags para identificar e encontrar esta turma com mais facilidade."
+      >
+        <Select
+          mode="multiple"
+          allowClear
+          loading={tagsQuery.isLoading}
+          placeholder="Selecione as tags"
+          options={(tagsQuery.data ?? []).map((tag) => ({
+            value: tag.id,
+            label: tag.description,
+          }))}
+          showSearch
+          optionFilterProp="label"
+          maxTagCount="responsive"
+        />
+      </Form.Item>
+
+      {tagsQuery.isError ? (
+        <Alert
+          type="warning"
+          showIcon
+          message={tagsQuery.error instanceof Error ? tagsQuery.error.message : 'Não foi possível carregar as tags.'}
+          style={{ marginBottom: 16 }}
+        />
+      ) : null}
     </>
   )
 }
